@@ -1,10 +1,585 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Minseok Kwak — Computer Vision & Machine Learning researcher." />
   <title>Minseok Kwak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0b0d;
+      --bg-surface: #111114;
+      --bg-card: #16161a;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text-primary: #f0f0f0;
+      --text-secondary: #8a8a9a;
+      --text-muted: #555566;
+      --accent: #5b6ef5;
+      --accent-soft: rgba(91,110,245,0.12);
+      --accent-mid: rgba(91,110,245,0.25);
+      --tag-bg: rgba(255,255,255,0.05);
+      --tag-text: #9090aa;
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 56px;
+      background: rgba(11,11,13,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px; font-weight: 600;
+      color: var(--text-primary); text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .nav-links { display: flex; gap: 1.75rem; list-style: none; }
+    .nav-links a {
+      font-size: 13px; color: var(--text-secondary);
+      text-decoration: none; transition: color 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 760px; margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-of-type { border-bottom: none; }
+
+    /* ── HERO ── */
+    #hero {
+      padding-top: 140px; padding-bottom: 6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-eyebrow {
+      font-size: 12px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 1.25rem; font-weight: 500;
+    }
+    .hero-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.5rem, 6vw, 3.75rem);
+      font-weight: 600; line-height: 1.05;
+      letter-spacing: -0.03em; color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+    .hero-sub {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+      font-weight: 400; color: var(--text-secondary);
+      margin-bottom: 1.75rem; letter-spacing: -0.01em;
+    }
+    .hero-bio {
+      font-size: 15px; color: var(--text-secondary);
+      max-width: 560px; line-height: 1.75;
+      margin-bottom: 2.25rem;
+    }
+    .hero-links { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; text-decoration: none;
+      transition: all 0.15s; cursor: pointer; border: none;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+    }
+    .btn-primary:hover { background: #6e7ff8; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ── SECTION HEADER ── */
+    .section-label {
+      font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 1rem; font-weight: 500;
+    }
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.6rem; font-weight: 600;
+      letter-spacing: -0.02em; margin-bottom: 0.5rem;
+    }
+    .section-desc {
+      color: var(--text-secondary); font-size: 14px;
+      margin-bottom: 3rem; max-width: 480px;
+    }
+
+    /* ── ABOUT ── */
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .about-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .about-block h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px; font-weight: 600;
+      margin-bottom: 0.75rem; color: var(--text-primary);
+    }
+    .about-block p {
+      font-size: 13.5px; color: var(--text-secondary);
+      line-height: 1.75;
+    }
+
+    /* ── EXPERIENCE TIMELINE ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 0 2rem;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-date {
+      font-size: 12px; color: var(--text-muted);
+      letter-spacing: 0.03em; padding-top: 3px;
+      font-weight: 500;
+    }
+    .timeline-org {
+      font-size: 11px; color: var(--accent);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      font-weight: 500; margin-bottom: 0.3rem;
+    }
+    .timeline-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px; font-weight: 600;
+      color: var(--text-primary); margin-bottom: 0.65rem;
+      letter-spacing: -0.01em;
+    }
+    .timeline-body {
+      font-size: 13.5px; color: var(--text-secondary);
+      line-height: 1.75; margin-bottom: 1rem;
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: var(--tag-bg); color: var(--tag-text);
+      border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 10px;
+      font-size: 11.5px; font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── PROJECTS ── */
+    .projects-grid {
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .project-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      transition: border-color 0.15s;
+      text-decoration: none; display: block;
+    }
+    .project-card:hover { border-color: var(--border-hover); }
+    .project-card-inner {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 1rem;
+    }
+    .project-meta {
+      font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent);
+      font-weight: 500; margin-bottom: 0.4rem;
+    }
+    .project-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 17px; font-weight: 600;
+      color: var(--text-primary); margin-bottom: 0.65rem;
+      letter-spacing: -0.01em;
+    }
+    .project-desc {
+      font-size: 13.5px; color: var(--text-secondary);
+      line-height: 1.75; margin-bottom: 1.1rem;
+    }
+    .project-arrow {
+      font-size: 18px; color: var(--text-muted);
+      transition: color 0.15s; flex-shrink: 0; margin-top: 2px;
+    }
+    .project-card:hover .project-arrow { color: var(--accent); }
+
+    /* ── CONTACT ── */
+    .contact-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .contact-item {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+    .contact-item:hover { border-color: var(--border-hover); }
+    .contact-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--accent-soft);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contact-icon svg { width: 16px; height: 16px; stroke: var(--accent); }
+    .contact-label {
+      font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      font-weight: 500; margin-bottom: 2px;
+    }
+    .contact-value {
+      font-size: 13px; color: var(--text-primary); font-weight: 500;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 2.5rem 0;
+      text-align: center;
+      font-size: 12px; color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 0 1.25rem; }
+      .nav-links { gap: 1.1rem; }
+      .container { padding: 0 1.25rem; }
+      .about-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .timeline-item { grid-template-columns: 1fr; gap: 0.25rem; }
+      .timeline-date { font-size: 11px; }
+      section { padding: 4rem 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
-  <h1>testing...</h1>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-name" href="#hero">MK</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Computer Science &mdash; UCL</p>
+      <h1 class="hero-name">Minseok Kwak</h1>
+      <p class="hero-sub">Computer Vision &amp; Machine Learning</p>
+      <p class="hero-bio">
+        Computer Science undergraduate at University College London, specializing in
+        computer vision and machine learning. I build research-driven systems and apply
+        them to challenging real-world problems, from surgical depth estimation to
+        multimodal spatial reasoning.
+      </p>
+      <div class="hero-links">
+        <a class="btn btn-primary" href="#projects">View Projects</a>
+        <a class="btn btn-ghost" href="https://github.com/mkwak13" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-ghost" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="container">
+      <p class="section-label">Background</p>
+      <h2 class="section-title">About Me</h2>
+      <p class="section-desc">My background, interests, and what motivates my work.</p>
+      <div class="about-grid">
+        <div class="about-block">
+          <h3>Who I Am</h3>
+          <p>
+            I am a South Korean student at UCL studying Computer Science. I was drawn to
+            engineering for its demand for deliberate reasoning toward a clear objective.
+            During my undergraduate years I engaged extensively across ML &amp; AI,
+            full-stack development, academic research, game development, web systems,
+            finance, and medical imaging.
+          </p>
+        </div>
+        <div class="about-block">
+          <h3>How I Work</h3>
+          <p>
+            I have worked in formally contracted client settings, high-pressure
+            military environments, and research collaborations with domain experts at the
+            frontier of their fields. I value structured planning, clear communication,
+            and processes that enable teams to work efficiently and sustainably. Outcomes
+            matter, but sound process matters more.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section id="experience">
+    <div class="container">
+      <p class="section-label">Career</p>
+      <h2 class="section-title">Experience</h2>
+      <p class="section-desc">Practical and unique experiences that have shaped who I am.</p>
+      <div class="timeline">
+
+        <div class="timeline-item">
+          <div class="timeline-date">2024</div>
+          <div>
+            <p class="timeline-org">Seoul National University &mdash; VGI Lab</p>
+            <p class="timeline-title">Machine Learning Research Intern</p>
+            <p class="timeline-body">
+              Long-term ML intern implementing SOTA models specializing in computer vision,
+              image processing, geometric perception, and 3D reconstruction. Submitted a
+              paper to CVPR 2026 as second author, introducing a multimodal pipeline
+              targeting spatial reasoning under heavy object occlusion.
+            </p>
+            <div class="tags">
+              <span class="tag">Machine Learning</span>
+              <span class="tag">Computer Vision</span>
+              <span class="tag">3D Reconstruction</span>
+              <span class="tag">LLM</span>
+              <span class="tag">Multimodal</span>
+              <span class="tag">Depth Perception</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-date">2023</div>
+          <div>
+            <p class="timeline-org">UCL &mdash; NAS Partnership</p>
+            <p class="timeline-title">Lead Developer, Game Development</p>
+            <p class="timeline-body">
+              Lead developer on a team of engineers under official partnership with the
+              National Autistic Society and MotionInputGames. Delivered a Unity-based
+              therapeutic game enabling autistic children to develop motor skills through
+              motion capture integration.
+            </p>
+            <div class="tags">
+              <span class="tag">3D Unity</span>
+              <span class="tag">C#</span>
+              <span class="tag">GPU Optimization</span>
+              <span class="tag">Motion Capture</span>
+              <span class="tag">Rigidbody Physics</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-date">2020 &ndash; 2022</div>
+          <div>
+            <p class="timeline-org">Republic of Korea Army</p>
+            <p class="timeline-title">Network Communications Specialist</p>
+            <p class="timeline-body">
+              Served 18 months in the Capital Mechanized Infantry Tiger Division,
+              Information Communications Battalion. Held the role of squad leader for over
+              half of service, allocating tasks, ensuring effective team collaboration,
+              and maintaining flawless performance under physically and mentally demanding
+              conditions.
+            </p>
+            <div class="tags">
+              <span class="tag">Leadership</span>
+              <span class="tag">Data Network</span>
+              <span class="tag">Security</span>
+              <span class="tag">Communications</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="projects">
+    <div class="container">
+      <p class="section-label">Research &amp; Development</p>
+      <h2 class="section-title">Projects &amp; Publications</h2>
+      <p class="section-desc">Works ranging from personal projects to conference submissions.</p>
+      <div class="projects-grid">
+
+        <div class="project-card">
+          <div class="project-card-inner">
+            <div style="flex:1">
+              <p class="project-meta">CVPR 2026 Submission &mdash; arXiv:2512.23365</p>
+              <p class="project-title">SpatialMosaic: A Multiview VLM Dataset for Partial Visibility</p>
+              <p class="project-desc">
+                Multi-modal 3D VLM pipeline learning spatial relations under multi-view
+                scenarios targeting frames with object occlusion and partial visibility,
+                without explicit 3D reconstruction. Integrates foundation model VGGT and
+                performs among SOTA on VSI-Bench.
+              </p>
+              <div class="tags">
+                <span class="tag">3D VLM</span>
+                <span class="tag">Multimodal</span>
+                <span class="tag">Spatial Reasoning</span>
+                <span class="tag">VQA</span>
+                <span class="tag">Foundation Model</span>
+                <span class="tag">CVPR</span>
+              </div>
+            </div>
+            <span class="project-arrow">&#8599;</span>
+          </div>
+          <div style="margin-top:1.25rem; display:flex; gap:0.6rem;">
+            <a class="btn btn-ghost" href="https://arxiv.org/abs/2512.23365" target="_blank" rel="noopener" style="font-size:12px; padding:7px 14px;">arXiv Paper</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-inner">
+            <div style="flex:1">
+              <p class="project-meta">UCL Final Year Project</p>
+              <p class="project-title">SHADeS++: Self-Consistent Specular Mask Prediction with Temporal Alignment</p>
+              <p class="project-desc">
+                An upgraded monocular depth estimation model for endoscopy that explicitly
+                models and suppresses diffuse and specular reflections while enforcing
+                temporal consistency across frames to enhance depth prediction quality.
+              </p>
+              <div class="tags">
+                <span class="tag">Endoscopy</span>
+                <span class="tag">Depth Estimation</span>
+                <span class="tag">Medical Imaging</span>
+                <span class="tag">Specular Artifacts</span>
+                <span class="tag">Temporal Consistency</span>
+              </div>
+            </div>
+            <span class="project-arrow">&#8599;</span>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-inner">
+            <div style="flex:1">
+              <p class="project-meta">NAS &mdash; MotionInputGames Partnership</p>
+              <p class="project-title">SuperHero SportsDay: Real-Time Motion Capture Sports Game</p>
+              <p class="project-desc">
+                3D Unity-based therapeutic game created under official partnership with the
+                National Autistic Society. Aims to improve motor skills in autistic children
+                during middle childhood through motion capture integration and game-based therapy.
+              </p>
+              <div class="tags">
+                <span class="tag">3D Unity</span>
+                <span class="tag">C#</span>
+                <span class="tag">Motion Capture</span>
+                <span class="tag">GPU Optimization</span>
+                <span class="tag">User Experience</span>
+              </div>
+            </div>
+            <span class="project-arrow">&#8599;</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="container">
+      <p class="section-label">Get in Touch</p>
+      <h2 class="section-title">Contact</h2>
+      <p class="section-desc">Open to research collaborations, internship opportunities, and interesting problems.</p>
+      <div class="contact-grid">
+
+        <a class="contact-item" href="mailto:minseok.kwak1438@gmail.com">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </div>
+          <div>
+            <p class="contact-label">Email</p>
+            <p class="contact-value">minseok.kwak1438@gmail.com</p>
+          </div>
+        </a>
+
+        <a class="contact-item" href="https://github.com/mkwak13" target="_blank" rel="noopener">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+          </div>
+          <div>
+            <p class="contact-label">GitHub</p>
+            <p class="contact-value">github.com/mkwak13</p>
+          </div>
+        </a>
+
+        <a class="contact-item" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+          </div>
+          <div>
+            <p class="contact-label">LinkedIn</p>
+            <p class="contact-value">linkedin.com/in/minseok-kwak</p>
+          </div>
+        </a>
+
+        <a class="contact-item" href="tel:+447707756836">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.92z"/></svg>
+          </div>
+          <div>
+            <p class="contact-label">Phone (UK)</p>
+            <p class="contact-value">+44 77077 56836</p>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>&copy; 2025 Minseok Kwak &mdash; Built with HTML &amp; CSS</p>
+  </div>
+</footer>
+
 </body>
 </html>
