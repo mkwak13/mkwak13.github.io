@@ -8,7 +8,30 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="site.css" />
+  <link rel="stylesheet" href="cite.css" />
+  <style>
+    /* Experience timeline: subtle ghosted background photo per entry, revealed on hover */
+    .t-item { overflow: hidden; }
+    .t-item > div { position: relative; z-index: 1; }
+    .t-photo {
+      position: absolute; top: 0; right: 0; height: 100%; width: 54%;
+      object-fit: cover; object-position: center;
+      opacity: 0.12;
+      filter: grayscale(0.75) brightness(0.85) contrast(1.05);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.4) 55%, #000 100%);
+      mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.4) 55%, #000 100%);
+      transform: scale(1.03);
+      transition: opacity 0.55s var(--ease), filter 0.55s var(--ease), transform 0.7s var(--ease);
+      pointer-events: none; z-index: 0;
+    }
+    .t-item:hover .t-photo {
+      opacity: 0.4;
+      filter: grayscale(0) brightness(1) contrast(1.02);
+      transform: scale(1.07);
+    }
+    @media (max-width: 720px) { .t-photo { width: 78%; opacity: 0.1; } .t-item:hover .t-photo { opacity: 0.3; } }
+    @media (prefers-reduced-motion: reduce) { .t-photo { transition: none; transform: none; } }
+  </style>
 </head>
 <body>
 
@@ -109,6 +132,7 @@
       <div class="timeline">
 
         <div class="t-item reveal">
+          <img class="t-photo" src="exp_snu.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="t-when mono"><span class="yr">2024</span>Present</div>
           <div>
             <p class="t-org mono">Seoul National University · VGI Lab</p>
@@ -128,6 +152,7 @@
         </div>
 
         <div class="t-item reveal">
+          <img class="t-photo" src="exp_ucl.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="t-when mono"><span class="yr">2023</span></div>
           <div>
             <p class="t-org mono">UCL · NAS Partnership</p>
@@ -146,6 +171,7 @@
         </div>
 
         <div class="t-item reveal">
+          <img class="t-photo" src="exp_army.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="t-when mono"><span class="yr">2020–22</span></div>
           <div>
             <p class="t-org mono">Republic of Korea Army</p>
@@ -175,7 +201,7 @@
       <p class="s-desc reveal">From conference submissions to personal projects.</p>
       <div class="pj-grid">
 
-        <a class="pj feature reveal" href="spatialmosaic.html">
+        <a class="pj feature reveal" href="Spatialmosaic.html">
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">CVPR 2026 Submission · arXiv:2512.23365</p>
@@ -197,7 +223,7 @@
           <span class="pj-cta mono">Read abstract →</span>
         </a>
 
-        <a class="pj reveal" href="shades.html">
+        <a class="pj reveal" href="Shades.html">
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">UCL Final Year Project</p>
@@ -218,7 +244,7 @@
           <span class="pj-cta mono">Read abstract →</span>
         </a>
 
-        <a class="pj reveal" href="superhero.html">
+        <a class="pj reveal" href="Superhero.html">
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">NAS · MotionInputGames Partnership</p>
@@ -284,7 +310,7 @@
   </div>
 </footer>
 
-<script src="site.js"></script>
+<script src="cite.js"></script>
 
 </body>
 </html>
