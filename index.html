@@ -3,433 +3,498 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Minseok Kwak — Computer Vision & Machine Learning researcher." />
-  <title>Minseok Kwak</title>
+  <meta name="description" content="Minseok Kwak. Computer Vision & Machine Learning researcher. Depth estimation, multi-view geometry, spatial reasoning." />
+  <title>Minseok Kwak · Perception &amp; 3D Vision</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0b0b0d;
-      --bg-surface: #111114;
-      --bg-card: #16161a;
-      --border: rgba(255,255,255,0.07);
-      --border-hover: rgba(255,255,255,0.14);
-      --text-primary: #f0f0f0;
-      --text-secondary: #8a8a9a;
-      --text-muted: #555566;
-      --accent: #5b6ef5;
-      --accent-soft: rgba(91,110,245,0.12);
-      --accent-mid: rgba(91,110,245,0.25);
-      --tag-bg: rgba(255,255,255,0.05);
-      --tag-text: #9090aa;
-      --radius: 10px;
-      --radius-lg: 16px;
+      /* base — deep slate with a blue-green cast, deliberately not pure black */
+      --ink: #0a1014;
+      --ink-2: #0d151b;
+      --panel: #111c23;
+      --panel-2: #16242d;
+      --line: rgba(180, 215, 230, 0.09);
+      --line-strong: rgba(180, 215, 230, 0.18);
+
+      /* text */
+      --paper: #e8eef1;
+      --paper-dim: #aebcc4;
+      --mute: #6f808a;
+      --faint: #46555e;
+
+      /* depth ramp — the signature duotone (near = warm, far = cool) */
+      --near: #ff7d54;   /* close surfaces */
+      --mid:  #c79bd0;   /* mid field */
+      --far:  #36c6d2;   /* distant */
+
+      --near-soft: rgba(255, 125, 84, 0.14);
+      --far-soft: rgba(54, 198, 210, 0.12);
+
+      --radius: 4px;
+      --radius-lg: 14px;
+      --maxw: 1080px;
+      --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text-primary);
-      font-size: 15px;
+      font-family: 'Hanken Grotesk', system-ui, sans-serif;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 15.5px;
       line-height: 1.7;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
     }
 
-    /* ── NAV ── */
-    nav {
+    /* ambient plotting grid behind everything */
+    body::before {
+      content: "";
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 110% 80% at 50% 0%, #000 35%, transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse 110% 80% at 50% 0%, #000 35%, transparent 78%);
+      opacity: 0.5;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    a { color: inherit; }
+
+    /* ── STATUS BAR / NAV ── */
+    .statusbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 2rem; height: 56px;
-      background: rgba(11,11,13,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
+      padding: 0 clamp(1.25rem, 4vw, 2.5rem); height: 52px;
+      background: rgba(10, 16, 20, 0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      border-bottom: 1px solid var(--line);
     }
-    .nav-name {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px; font-weight: 600;
-      color: var(--text-primary); text-decoration: none;
-      letter-spacing: -0.01em;
+    .brand {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+      color: var(--paper); text-decoration: none;
     }
-    .nav-links { display: flex; gap: 1.75rem; list-style: none; }
+    .brand .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--near);
+      box-shadow: 0 0 0 3px var(--near-soft);
+    }
+    .status-meta { color: var(--faint); display: none; }
+    @media (min-width: 880px) { .status-meta { display: inline; } }
+
+    .nav-links { display: flex; gap: clamp(0.9rem, 2vw, 1.9rem); list-style: none; align-items: center; }
     .nav-links a {
-      font-size: 13px; color: var(--text-secondary);
-      text-decoration: none; transition: color 0.15s;
-      letter-spacing: 0.01em;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--mute); text-decoration: none;
+      position: relative; padding: 4px 0;
+      transition: color 0.22s var(--ease);
     }
-    .nav-links a:hover { color: var(--text-primary); }
+    .nav-links a::after {
+      content: ""; position: absolute; left: 0; right: 100%; bottom: -1px; height: 1px;
+      background: var(--far); transition: right 0.28s var(--ease);
+    }
+    .nav-links a:hover { color: var(--paper); }
+    .nav-links a:hover::after { right: 0; }
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .brand { font-size: 15px; }
+    }
 
     /* ── LAYOUT ── */
-    .container {
-      max-width: 760px; margin: 0 auto;
-      padding: 0 2rem;
-    }
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 2.5rem); position: relative; z-index: 1; }
 
-    section {
-      padding: 6rem 0;
-      border-bottom: 1px solid var(--border);
+    section { position: relative; z-index: 1; padding: clamp(4.5rem, 9vw, 8rem) 0; }
+    .ruled { border-top: 1px solid var(--line); }
+
+    /* section eyebrow */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      color: var(--far); margin-bottom: 1.1rem;
     }
-    section:last-of-type { border-bottom: none; }
+    .eyebrow::before {
+      content: ""; width: 22px; height: 1px; background: var(--far); display: inline-block;
+    }
+    .s-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 600;
+      letter-spacing: -0.025em; line-height: 1.08; color: var(--paper);
+    }
+    .s-desc { color: var(--paper-dim); font-size: 15px; margin-top: 0.75rem; max-width: 46ch; }
 
     /* ── HERO ── */
     #hero {
-      padding-top: 140px; padding-bottom: 6rem;
-      border-bottom: 1px solid var(--border);
+      position: relative; min-height: 100svh;
+      display: flex; align-items: center;
+      padding-top: 80px; padding-bottom: 5rem;
+      overflow: hidden;
     }
-    .hero-eyebrow {
-      font-size: 12px; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--accent);
-      margin-bottom: 1.25rem; font-weight: 500;
+    #depthfield {
+      position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%;
+      display: block;
     }
-    .hero-name {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(2.5rem, 6vw, 3.75rem);
-      font-weight: 600; line-height: 1.05;
-      letter-spacing: -0.03em; color: var(--text-primary);
-      margin-bottom: 0.5rem;
-    }
-    .hero-sub {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
-      font-weight: 400; color: var(--text-secondary);
-      margin-bottom: 1.75rem; letter-spacing: -0.01em;
-    }
-    .hero-bio {
-      font-size: 15px; color: var(--text-secondary);
-      max-width: 560px; line-height: 1.75;
-      margin-bottom: 2.25rem;
-    }
-    .hero-links { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border-radius: var(--radius);
-      font-size: 13px; font-weight: 500; text-decoration: none;
-      transition: all 0.15s; cursor: pointer; border: none;
-    }
-    .btn-primary {
-      background: var(--accent); color: #fff;
-    }
-    .btn-primary:hover { background: #6e7ff8; }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover {
-      border-color: var(--border-hover);
-      color: var(--text-primary);
-      background: rgba(255,255,255,0.04);
-    }
+    #hero .wrap { z-index: 2; }
+    /* corner instrument ticks framing the hero viewport */
+    .viewport-frame { position: absolute; inset: 18px; z-index: 1; pointer-events: none; }
+    .vtick { position: absolute; width: 14px; height: 14px; border: 1px solid var(--line-strong); }
+    .vtick.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .vtick.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .vtick.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .vtick.br { bottom: 0; right: 0; border-left: none; border-top: none; }
 
-    /* ── SECTION HEADER ── */
-    .section-label {
-      font-size: 11px; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--accent);
-      margin-bottom: 1rem; font-weight: 500;
+    .hero-eyebrow { color: var(--mute); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .hero-eyebrow b { color: var(--far); font-weight: 400; }
+    .hero-name {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(3rem, 10vw, 6rem);
+      font-weight: 700; line-height: 0.94; letter-spacing: -0.04em;
+      color: var(--paper);
     }
-    .section-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.6rem; font-weight: 600;
-      letter-spacing: -0.02em; margin-bottom: 0.5rem;
+    .hero-name .accent { color: transparent; -webkit-text-stroke: 1.4px var(--paper-dim); }
+    .hero-sub {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.05rem, 3vw, 1.5rem); font-weight: 400;
+      color: var(--paper-dim); margin-top: 1.1rem; letter-spacing: -0.01em;
     }
-    .section-desc {
-      color: var(--text-secondary); font-size: 14px;
-      margin-bottom: 3rem; max-width: 480px;
+    .hero-sub .swap { color: var(--near); }
+    .hero-bio {
+      font-size: 16px; color: var(--paper-dim); max-width: 52ch;
+      margin-top: 1.6rem; line-height: 1.78;
     }
+    .hero-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 2.2rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; letter-spacing: 0.06em; text-decoration: none;
+      cursor: pointer; border: 1px solid transparent;
+      transition: transform 0.22s var(--ease), background 0.22s var(--ease), border-color 0.22s var(--ease), color 0.22s var(--ease);
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--paper); color: var(--ink); }
+    .btn-primary:hover { background: var(--far); }
+    .btn-ghost { color: var(--paper-dim); border-color: var(--line-strong); background: transparent; }
+    .btn-ghost:hover { color: var(--paper); border-color: var(--far); background: var(--far-soft); }
+    .btn .arr { transition: transform 0.22s var(--ease); }
+    .btn:hover .arr { transform: translate(2px, -2px); }
+
+    /* depth ramp legend — signature */
+    .ramp {
+      margin-top: 3rem; max-width: 420px;
+      display: grid; grid-template-columns: 1fr; gap: 0.5rem;
+    }
+    .ramp-bar {
+      height: 8px; border-radius: 99px;
+      background: linear-gradient(90deg, var(--near), var(--mid) 52%, var(--far));
+      box-shadow: 0 0 22px rgba(54,198,210,0.18);
+    }
+    .ramp-labels { display: flex; justify-content: space-between; color: var(--mute); }
+    .ramp-labels b { color: var(--paper-dim); font-weight: 500; }
 
     /* ── ABOUT ── */
-    .about-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+    .about-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 2.8rem; }
+    @media (min-width: 760px) { .about-grid { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.6rem 1.7rem;
+      transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
     }
-    .about-block {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
+    .card:hover { border-color: var(--line-strong); }
+    .card h3 {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 16px; font-weight: 600; color: var(--paper); margin-bottom: 0.7rem;
+      display: flex; align-items: center; gap: 0.6rem;
     }
-    .about-block h3 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 15px; font-weight: 600;
-      margin-bottom: 0.75rem; color: var(--text-primary);
-    }
-    .about-block p {
-      font-size: 13.5px; color: var(--text-secondary);
-      line-height: 1.75;
-    }
+    .card h3 .k { color: var(--near); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .card p { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; }
 
-    /* ── EXPERIENCE TIMELINE ── */
-    .timeline { display: flex; flex-direction: column; gap: 0; }
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 160px 1fr;
-      gap: 0 2rem;
-      padding: 2rem 0;
-      border-bottom: 1px solid var(--border);
+    .facts { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem; }
+    .fact {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em;
+      color: var(--paper-dim);
+      border: 1px solid var(--line); border-radius: 99px; padding: 6px 13px;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .fact i { width: 5px; height: 5px; border-radius: 50%; background: var(--far); font-style: normal; }
+    .fact.warm i { background: var(--near); }
+
+    /* ── EXPERIENCE (true chronological sequence) ── */
+    .timeline { margin-top: 2.8rem; }
+    .t-item {
+      display: grid; grid-template-columns: 1fr; gap: 0.4rem 2rem;
+      padding: 2rem 0; border-top: 1px solid var(--line);
       position: relative;
     }
-    .timeline-item:last-child { border-bottom: none; }
-    .timeline-date {
-      font-size: 12px; color: var(--text-muted);
-      letter-spacing: 0.03em; padding-top: 3px;
-      font-weight: 500;
+    @media (min-width: 720px) { .t-item { grid-template-columns: 150px 1fr; } }
+    .t-item:first-child { border-top: none; }
+    .t-when { color: var(--mute); padding-top: 4px; }
+    .t-when .yr { color: var(--paper); font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; letter-spacing: 0; display:block; }
+    .t-org { color: var(--far); margin-bottom: 0.5rem; }
+    .t-role {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 18px; font-weight: 600; color: var(--paper);
+      letter-spacing: -0.015em; margin-bottom: 0.7rem;
     }
-    .timeline-org {
-      font-size: 11px; color: var(--accent);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      font-weight: 500; margin-bottom: 0.3rem;
-    }
-    .timeline-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 16px; font-weight: 600;
-      color: var(--text-primary); margin-bottom: 0.65rem;
-      letter-spacing: -0.01em;
-    }
-    .timeline-body {
-      font-size: 13.5px; color: var(--text-secondary);
-      line-height: 1.75; margin-bottom: 1rem;
-    }
+    .t-body { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; margin-bottom: 1.1rem; }
     .tags { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag {
-      background: var(--tag-bg); color: var(--tag-text);
-      border: 1px solid var(--border);
-      border-radius: 6px; padding: 3px 10px;
-      font-size: 11.5px; font-weight: 400;
-      letter-spacing: 0.01em;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.03em;
+      color: var(--mute); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 3px 9px; transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
     }
+    .t-item:hover .tag, .pj:hover .tag { color: var(--paper-dim); border-color: var(--line-strong); }
 
     /* ── PROJECTS ── */
-    .projects-grid {
-      display: flex; flex-direction: column; gap: 1.25rem;
+    .pj-grid { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 2.8rem; }
+    .pj {
+      position: relative; display: block; text-decoration: none;
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.7rem 1.8rem; overflow: hidden;
+      transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
     }
-    .project-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      transition: border-color 0.15s;
-      text-decoration: none; display: block;
+    .pj::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: linear-gradient(180deg, var(--near), var(--far));
+      transform: scaleY(0); transform-origin: top; transition: transform 0.35s var(--ease);
     }
-    .project-card:hover { border-color: var(--border-hover); }
-    .project-card-inner {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; gap: 1rem;
+    .pj:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+    .pj:hover::before { transform: scaleY(1); }
+    .pj.feature { padding: 2rem 1.9rem; }
+    .pj-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .pj-meta { color: var(--far); margin-bottom: 0.6rem; }
+    .pj.feature .pj-meta { color: var(--near); }
+    .pj-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.05rem, 2.4vw, 1.3rem); font-weight: 600;
+      color: var(--paper); letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 0.7rem;
     }
-    .project-meta {
-      font-size: 11px; letter-spacing: 0.08em;
-      text-transform: uppercase; color: var(--accent);
-      font-weight: 500; margin-bottom: 0.4rem;
+    .pj-desc { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; margin-bottom: 1.1rem; max-width: 64ch; }
+    .pj-arr { color: var(--faint); font-size: 16px; flex-shrink: 0; transition: transform 0.25s var(--ease), color 0.25s var(--ease); }
+    .pj:hover .pj-arr { color: var(--far); transform: translate(3px, -3px); }
+    .pj-links { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+    .pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em;
+      color: var(--paper-dim); border: 1px solid var(--line-strong); border-radius: var(--radius);
+      padding: 6px 13px; text-decoration: none; transition: all 0.2s var(--ease);
+      display: inline-flex; align-items: center; gap: 6px;
     }
-    .project-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 17px; font-weight: 600;
-      color: var(--text-primary); margin-bottom: 0.65rem;
-      letter-spacing: -0.01em;
-    }
-    .project-desc {
-      font-size: 13.5px; color: var(--text-secondary);
-      line-height: 1.75; margin-bottom: 1.1rem;
-    }
-    .project-arrow {
-      font-size: 18px; color: var(--text-muted);
-      transition: color 0.15s; flex-shrink: 0; margin-top: 2px;
-    }
-    .project-card:hover .project-arrow { color: var(--accent); }
+    .pill:hover { color: var(--ink); background: var(--far); border-color: var(--far); }
 
     /* ── CONTACT ── */
-    .contact-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+    .contact-grid { display: grid; grid-template-columns: 1fr; gap: 0.8rem; margin-top: 2.8rem; }
+    @media (min-width: 620px) { .contact-grid { grid-template-columns: 1fr 1fr; } }
+    .ct {
+      display: flex; align-items: center; gap: 14px; text-decoration: none;
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem; transition: border-color 0.22s var(--ease), transform 0.22s var(--ease);
     }
-    .contact-item {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.1rem 1.25rem;
-      text-decoration: none;
-      transition: border-color 0.15s;
+    .ct:hover { border-color: var(--far); transform: translateY(-2px); }
+    .ct-ic {
+      width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+      background: var(--far-soft); display: flex; align-items: center; justify-content: center;
     }
-    .contact-item:hover { border-color: var(--border-hover); }
-    .contact-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: var(--accent-soft);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .contact-icon svg { width: 16px; height: 16px; stroke: var(--accent); }
-    .contact-label {
-      font-size: 11px; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.07em;
-      font-weight: 500; margin-bottom: 2px;
-    }
-    .contact-value {
-      font-size: 13px; color: var(--text-primary); font-weight: 500;
-    }
+    .ct:hover .ct-ic { background: var(--near-soft); }
+    .ct-ic svg { width: 17px; height: 17px; stroke: var(--far); transition: stroke 0.22s var(--ease); }
+    .ct:hover .ct-ic svg { stroke: var(--near); }
+    .ct-lab { color: var(--mute); margin-bottom: 2px; }
+    .ct-val { font-size: 13.5px; color: var(--paper); font-weight: 500; word-break: break-all; }
 
     /* ── FOOTER ── */
-    footer {
-      padding: 2.5rem 0;
-      text-align: center;
-      font-size: 12px; color: var(--text-muted);
-      letter-spacing: 0.03em;
-    }
+    footer { padding: 3rem 0 3.5rem; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+    .foot-row { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; }
+    .foot-row .mono { color: var(--faint); }
+    .foot-row .mono b { color: var(--mute); font-weight: 400; }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 640px) {
-      nav { padding: 0 1.25rem; }
-      .nav-links { gap: 1.1rem; }
-      .container { padding: 0 1.25rem; }
-      .about-grid { grid-template-columns: 1fr; }
-      .contact-grid { grid-template-columns: 1fr; }
-      .timeline-item { grid-template-columns: 1fr; gap: 0.25rem; }
-      .timeline-date { font-size: 11px; }
-      section { padding: 4rem 0; }
-    }
+    /* ── REVEAL (subtle) ── */
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    /* hero load stagger */
+    .h-anim { opacity: 0; transform: translateY(16px); animation: rise 0.8s var(--ease) forwards; }
+    .h-anim.d1 { animation-delay: 0.05s; }
+    .h-anim.d2 { animation-delay: 0.15s; }
+    .h-anim.d3 { animation-delay: 0.25s; }
+    .h-anim.d4 { animation-delay: 0.35s; }
+    .h-anim.d5 { animation-delay: 0.48s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    :focus-visible { outline: 2px solid var(--far); outline-offset: 3px; border-radius: 2px; }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; }
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+      .h-anim { opacity: 1; transform: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <a class="nav-name" href="#hero">MK</a>
-  <ul class="nav-links">
-    <li><a href="#about">About</a></li>
-    <li><a href="#experience">Experience</a></li>
-    <li><a href="#projects">Projects</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ul>
-</nav>
+<!-- STATUS BAR -->
+<header class="statusbar">
+  <a class="brand" href="#hero" aria-label="Minseok Kwak, home">
+    <span class="dot" aria-hidden="true"></span> Minseok&nbsp;Kwak
+  </a>
+  <span class="mono status-meta">PERCEPTION&nbsp;/&nbsp;3D&nbsp;VISION · LONDON 51.50°N</span>
+  <nav>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#experience">Experience</a></li>
+      <li><a href="#projects">Work</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
 
 <main>
 
   <!-- HERO -->
   <section id="hero">
-    <div class="container">
-      <p class="hero-eyebrow">Computer Science &mdash; UCL</p>
-      <h1 class="hero-name">Minseok Kwak</h1>
-      <p class="hero-sub">Computer Vision &amp; Machine Learning</p>
-      <p class="hero-bio">
-        Computer Science undergraduate at University College London, specializing in
-        computer vision and machine learning. I build research-driven systems and apply
-        them to challenging real-world problems, from surgical depth estimation to
-        multimodal spatial reasoning.
+    <canvas id="depthfield" aria-hidden="true"></canvas>
+    <div class="viewport-frame" aria-hidden="true">
+      <span class="vtick tl"></span><span class="vtick tr"></span>
+      <span class="vtick bl"></span><span class="vtick br"></span>
+    </div>
+    <div class="wrap">
+      <p class="hero-eyebrow mono h-anim d1">
+        <span>BSc Computer Science · UCL</span>
+        <span><b>●</b> Open to research &amp; internships</span>
       </p>
-      <div class="hero-links">
-        <a class="btn btn-primary" href="#projects">View Projects</a>
+      <h1 class="hero-name h-anim d2">Minseok<br><span class="accent">Kwak</span></h1>
+      <p class="hero-sub h-anim d3">Teaching machines to perceive <span class="swap">depth</span>, space, and structure.</p>
+      <p class="hero-bio h-anim d4">
+        Computer vision and machine learning researcher specializing in depth estimation,
+        multi-view geometry, and multimodal spatial reasoning. I build research-driven
+        perception systems and push them onto hard real-world problems, from surgical
+        endoscopy to occlusion-heavy 3D scenes.
+      </p>
+      <div class="hero-actions h-anim d4">
+        <a class="btn btn-primary" href="#projects">View work <span class="arr" aria-hidden="true">↗</span></a>
         <a class="btn btn-ghost" href="https://github.com/mkwak13" target="_blank" rel="noopener">GitHub</a>
         <a class="btn btn-ghost" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+      <div class="ramp h-anim d5" aria-hidden="true">
+        <div class="ramp-bar"></div>
+        <div class="ramp-labels mono"><span><b>NEAR</b> 0.0</span><span>DEPTH</span><span><b>FAR</b> ∞</span></div>
       </div>
     </div>
   </section>
 
   <!-- ABOUT -->
-  <section id="about">
-    <div class="container">
-      <p class="section-label">Background</p>
-      <h2 class="section-title">About Me</h2>
-      <p class="section-desc">My background, interests, and what motivates my work.</p>
+  <section id="about" class="ruled">
+    <div class="wrap">
+      <p class="eyebrow mono reveal">Background</p>
+      <h2 class="s-title reveal">About</h2>
+      <p class="s-desc reveal">What I work on, and how I work.</p>
       <div class="about-grid">
-        <div class="about-block">
-          <h3>Who I Am</h3>
+        <div class="card reveal">
+          <h3><span class="k">01</span> Who I am</h3>
           <p>
-            I am a South Korean student at UCL studying Computer Science. I was drawn to
-            engineering for its demand for deliberate reasoning toward a clear objective.
-            During my undergraduate years I engaged extensively across ML &amp; AI,
-            full-stack development, academic research, game development, web systems,
-            finance, and medical imaging.
+            South Korean Computer Science graduate from UCL. I was drawn to engineering for
+            its demand for deliberate reasoning toward a clear objective. Across my degree I
+            worked widely through ML and AI, full-stack development, academic research, game
+            development, web systems, finance, and medical imaging.
           </p>
         </div>
-        <div class="about-block">
-          <h3>How I Work</h3>
+        <div class="card reveal">
+          <h3><span class="k">02</span> How I work</h3>
           <p>
-            I have worked in formally contracted client settings, high-pressure
-            military environments, and research collaborations with domain experts at the
-            frontier of their fields. I value structured planning, clear communication,
-            and processes that enable teams to work efficiently and sustainably. Outcomes
-            matter, but sound process matters more.
+            I have worked in formally contracted client settings, high-pressure military
+            environments, and research collaborations with domain experts at the frontier of
+            their fields. I value structured planning, clear communication, and processes that
+            let teams move efficiently and sustainably. Outcomes matter, but sound process
+            matters more.
           </p>
         </div>
+      </div>
+      <div class="facts reveal" aria-hidden="false">
+        <span class="fact"><i></i>Computer Vision</span>
+        <span class="fact"><i></i>3D Reconstruction</span>
+        <span class="fact warm"><i></i>Depth Estimation</span>
+        <span class="fact"><i></i>Multimodal / VLM</span>
+        <span class="fact warm"><i></i>Medical Imaging</span>
+        <span class="fact"><i></i>Spatial Reasoning</span>
       </div>
     </div>
   </section>
 
   <!-- EXPERIENCE -->
-  <section id="experience">
-    <div class="container">
-      <p class="section-label">Career</p>
-      <h2 class="section-title">Experience</h2>
-      <p class="section-desc">Practical and unique experiences that have shaped who I am.</p>
+  <section id="experience" class="ruled">
+    <div class="wrap">
+      <p class="eyebrow mono reveal">Career</p>
+      <h2 class="s-title reveal">Experience</h2>
+      <p class="s-desc reveal">A chronological record of the work that shaped how I build.</p>
       <div class="timeline">
 
-        <div class="timeline-item">
-          <div class="timeline-date">2024</div>
+        <div class="t-item reveal">
+          <div class="t-when mono"><span class="yr">2024</span>Present</div>
           <div>
-            <p class="timeline-org">Seoul National University &mdash; VGI Lab</p>
-            <p class="timeline-title">Machine Learning Research Intern</p>
-            <p class="timeline-body">
-              Long-term ML intern implementing SOTA models specializing in computer vision,
-              image processing, geometric perception, and 3D reconstruction. Submitted a
-              paper to CVPR 2026 as second author, introducing a multimodal pipeline
-              targeting spatial reasoning under heavy object occlusion.
+            <p class="t-org mono">Seoul National University · VGI Lab</p>
+            <p class="t-role">Machine Learning Research Intern</p>
+            <p class="t-body">
+              Long-term ML intern implementing state-of-the-art models across computer vision,
+              image processing, geometric perception, and 3D reconstruction. Submitted a paper
+              to CVPR 2026 as second author, introducing a multimodal pipeline for spatial
+              reasoning under heavy object occlusion.
             </p>
             <div class="tags">
-              <span class="tag">Machine Learning</span>
-              <span class="tag">Computer Vision</span>
-              <span class="tag">3D Reconstruction</span>
-              <span class="tag">LLM</span>
-              <span class="tag">Multimodal</span>
-              <span class="tag">Depth Perception</span>
+              <span class="tag">Machine Learning</span><span class="tag">Computer Vision</span>
+              <span class="tag">3D Reconstruction</span><span class="tag">LLM</span>
+              <span class="tag">Multimodal</span><span class="tag">Depth Perception</span>
             </div>
           </div>
         </div>
 
-        <div class="timeline-item">
-          <div class="timeline-date">2023</div>
+        <div class="t-item reveal">
+          <div class="t-when mono"><span class="yr">2023</span></div>
           <div>
-            <p class="timeline-org">UCL &mdash; NAS Partnership</p>
-            <p class="timeline-title">Lead Developer, Game Development</p>
-            <p class="timeline-body">
-              Lead developer on a team of engineers under official partnership with the
-              National Autistic Society and MotionInputGames. Delivered a Unity-based
-              therapeutic game enabling autistic children to develop motor skills through
-              motion capture integration.
+            <p class="t-org mono">UCL · NAS Partnership</p>
+            <p class="t-role">Lead Developer, Game Development</p>
+            <p class="t-body">
+              Lead developer on a team of engineers under official partnership with the National
+              Autistic Society and MotionInputGames. Delivered a Unity-based therapeutic game
+              that helps autistic children develop motor skills through motion-capture integration.
             </p>
             <div class="tags">
-              <span class="tag">3D Unity</span>
-              <span class="tag">C#</span>
-              <span class="tag">GPU Optimization</span>
-              <span class="tag">Motion Capture</span>
+              <span class="tag">3D Unity</span><span class="tag">C#</span>
+              <span class="tag">GPU Optimization</span><span class="tag">Motion Capture</span>
               <span class="tag">Rigidbody Physics</span>
             </div>
           </div>
         </div>
 
-        <div class="timeline-item">
-          <div class="timeline-date">2020 &ndash; 2022</div>
+        <div class="t-item reveal">
+          <div class="t-when mono"><span class="yr">2020–22</span></div>
           <div>
-            <p class="timeline-org">Republic of Korea Army</p>
-            <p class="timeline-title">Network Communications Specialist</p>
-            <p class="timeline-body">
-              Served 18 months in the Capital Mechanized Infantry Tiger Division,
-              Information Communications Battalion. Held the role of squad leader for over
-              half of service, allocating tasks, ensuring effective team collaboration,
-              and maintaining flawless performance under physically and mentally demanding
-              conditions.
+            <p class="t-org mono">Republic of Korea Army</p>
+            <p class="t-role">Network Communications Specialist</p>
+            <p class="t-body">
+              Served 18 months in the Capital Mechanized Infantry Tiger Division, Information
+              Communications Battalion. Held the squad-leader role for over half of service,
+              allocating tasks, ensuring effective team collaboration, and maintaining flawless
+              performance under physically and mentally demanding conditions.
             </p>
             <div class="tags">
-              <span class="tag">Leadership</span>
-              <span class="tag">Data Network</span>
-              <span class="tag">Security</span>
-              <span class="tag">Communications</span>
+              <span class="tag">Leadership</span><span class="tag">Data Network</span>
+              <span class="tag">Security</span><span class="tag">Communications</span>
             </div>
           </div>
         </div>
@@ -439,134 +504,107 @@
   </section>
 
   <!-- PROJECTS -->
-  <section id="projects">
-    <div class="container">
-      <p class="section-label">Research &amp; Development</p>
-      <h2 class="section-title">Projects &amp; Publications</h2>
-      <p class="section-desc">Works ranging from personal projects to conference submissions.</p>
-      <div class="projects-grid">
+  <section id="projects" class="ruled">
+    <div class="wrap">
+      <p class="eyebrow mono reveal">Research &amp; Development</p>
+      <h2 class="s-title reveal">Selected Work</h2>
+      <p class="s-desc reveal">From conference submissions to personal projects.</p>
+      <div class="pj-grid">
 
-        <div class="project-card">
-          <div class="project-card-inner">
-            <div style="flex:1">
-              <p class="project-meta">CVPR 2026 Submission &mdash; arXiv:2512.23365</p>
-              <p class="project-title">SpatialMosaic: A Multiview VLM Dataset for Partial Visibility</p>
-              <p class="project-desc">
-                Multi-modal 3D VLM pipeline learning spatial relations under multi-view
-                scenarios targeting frames with object occlusion and partial visibility,
-                without explicit 3D reconstruction. Integrates foundation model VGGT and
-                performs among SOTA on VSI-Bench.
-              </p>
-              <div class="tags">
-                <span class="tag">3D VLM</span>
-                <span class="tag">Multimodal</span>
-                <span class="tag">Spatial Reasoning</span>
-                <span class="tag">VQA</span>
-                <span class="tag">Foundation Model</span>
-                <span class="tag">CVPR</span>
-              </div>
+        <a class="pj feature reveal" href="https://arxiv.org/abs/2512.23365" target="_blank" rel="noopener">
+          <div class="pj-top">
+            <div>
+              <p class="pj-meta mono">CVPR 2026 Submission · arXiv:2512.23365</p>
+              <p class="pj-title">SpatialMosaic: A Multi-view VLM Dataset for Partial Visibility</p>
             </div>
-            <span class="project-arrow">&#8599;</span>
+            <span class="pj-arr" aria-hidden="true">↗</span>
           </div>
-          <div style="margin-top:1.25rem; display:flex; gap:0.6rem;">
-            <a class="btn btn-ghost" href="https://arxiv.org/abs/2512.23365" target="_blank" rel="noopener" style="font-size:12px; padding:7px 14px;">arXiv Paper</a>
+          <p class="pj-desc">
+            Multimodal 3D VLM pipeline that learns spatial relations across multi-view scenarios,
+            targeting frames with object occlusion and partial visibility without explicit 3D
+            reconstruction. Integrates the VGGT foundation model and ranks among state-of-the-art
+            on VSI-Bench.
+          </p>
+          <div class="tags" style="margin-bottom:1.1rem">
+            <span class="tag">3D VLM</span><span class="tag">Multimodal</span>
+            <span class="tag">Spatial Reasoning</span><span class="tag">VQA</span>
+            <span class="tag">Foundation Model</span><span class="tag">CVPR</span>
           </div>
-        </div>
+          <div class="pj-links">
+            <span class="pill">arXiv Paper ↗</span>
+          </div>
+        </a>
 
-        <div class="project-card">
-          <div class="project-card-inner">
-            <div style="flex:1">
-              <p class="project-meta">UCL Final Year Project</p>
-              <p class="project-title">SHADeS++: Self-Consistent Specular Mask Prediction with Temporal Alignment</p>
-              <p class="project-desc">
-                An upgraded monocular depth estimation model for endoscopy that explicitly
-                models and suppresses diffuse and specular reflections while enforcing
-                temporal consistency across frames to enhance depth prediction quality.
-              </p>
-              <div class="tags">
-                <span class="tag">Endoscopy</span>
-                <span class="tag">Depth Estimation</span>
-                <span class="tag">Medical Imaging</span>
-                <span class="tag">Specular Artifacts</span>
-                <span class="tag">Temporal Consistency</span>
-              </div>
+        <a class="pj reveal" href="https://github.com/mkwak13" target="_blank" rel="noopener">
+          <div class="pj-top">
+            <div>
+              <p class="pj-meta mono">UCL Final Year Project</p>
+              <p class="pj-title">SHADeS++: Specular-Aware Monocular Depth for Endoscopy</p>
             </div>
-            <span class="project-arrow">&#8599;</span>
+            <span class="pj-arr" aria-hidden="true">↗</span>
           </div>
-        </div>
+          <p class="pj-desc">
+            An upgraded monocular depth-estimation model for endoscopy that explicitly models and
+            suppresses diffuse and specular reflections while enforcing temporal consistency across
+            frames, lifting depth-prediction quality on reflective surgical scenes.
+          </p>
+          <div class="tags">
+            <span class="tag">Endoscopy</span><span class="tag">Depth Estimation</span>
+            <span class="tag">Medical Imaging</span><span class="tag">Specular Artifacts</span>
+            <span class="tag">Temporal Consistency</span>
+          </div>
+        </a>
 
-        <div class="project-card">
-          <div class="project-card-inner">
-            <div style="flex:1">
-              <p class="project-meta">NAS &mdash; MotionInputGames Partnership</p>
-              <p class="project-title">SuperHero SportsDay: Real-Time Motion Capture Sports Game</p>
-              <p class="project-desc">
-                3D Unity-based therapeutic game created under official partnership with the
-                National Autistic Society. Aims to improve motor skills in autistic children
-                during middle childhood through motion capture integration and game-based therapy.
-              </p>
-              <div class="tags">
-                <span class="tag">3D Unity</span>
-                <span class="tag">C#</span>
-                <span class="tag">Motion Capture</span>
-                <span class="tag">GPU Optimization</span>
-                <span class="tag">User Experience</span>
-              </div>
+        <a class="pj reveal" href="https://github.com/mkwak13" target="_blank" rel="noopener">
+          <div class="pj-top">
+            <div>
+              <p class="pj-meta mono">NAS · MotionInputGames Partnership</p>
+              <p class="pj-title">SuperHero SportsDay: Real-time Motion-Capture Sports Game</p>
             </div>
-            <span class="project-arrow">&#8599;</span>
+            <span class="pj-arr" aria-hidden="true">↗</span>
           </div>
-        </div>
+          <p class="pj-desc">
+            3D Unity therapeutic game built under official partnership with the National Autistic
+            Society, designed to improve motor skills in autistic children during middle childhood
+            through motion-capture integration and game-based therapy.
+          </p>
+          <div class="tags">
+            <span class="tag">3D Unity</span><span class="tag">C#</span>
+            <span class="tag">Motion Capture</span><span class="tag">GPU Optimization</span>
+            <span class="tag">User Experience</span>
+          </div>
+        </a>
 
       </div>
     </div>
   </section>
 
   <!-- CONTACT -->
-  <section id="contact">
-    <div class="container">
-      <p class="section-label">Get in Touch</p>
-      <h2 class="section-title">Contact</h2>
-      <p class="section-desc">Open to research collaborations, internship opportunities, and interesting problems.</p>
+  <section id="contact" class="ruled">
+    <div class="wrap">
+      <p class="eyebrow mono reveal">Get in touch</p>
+      <h2 class="s-title reveal">Contact</h2>
+      <p class="s-desc reveal">Open to research collaborations, internship opportunities, and interesting problems.</p>
       <div class="contact-grid">
 
-        <a class="contact-item" href="mailto:minseok.kwak1438@gmail.com">
-          <div class="contact-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-          </div>
-          <div>
-            <p class="contact-label">Email</p>
-            <p class="contact-value">minseok.kwak1438@gmail.com</p>
-          </div>
+        <a class="ct reveal" href="mailto:minseok.kwak1438@gmail.com">
+          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+          <span><span class="ct-lab mono">Email</span><br><span class="ct-val">minseok.kwak1438@gmail.com</span></span>
         </a>
 
-        <a class="contact-item" href="https://github.com/mkwak13" target="_blank" rel="noopener">
-          <div class="contact-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-          </div>
-          <div>
-            <p class="contact-label">GitHub</p>
-            <p class="contact-value">github.com/mkwak13</p>
-          </div>
+        <a class="ct reveal" href="https://github.com/mkwak13" target="_blank" rel="noopener">
+          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></span>
+          <span><span class="ct-lab mono">GitHub</span><br><span class="ct-val">github.com/mkwak13</span></span>
         </a>
 
-        <a class="contact-item" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">
-          <div class="contact-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
-          </div>
-          <div>
-            <p class="contact-label">LinkedIn</p>
-            <p class="contact-value">linkedin.com/in/minseok-kwak</p>
-          </div>
+        <a class="ct reveal" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">
+          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg></span>
+          <span><span class="ct-lab mono">LinkedIn</span><br><span class="ct-val">linkedin.com/in/minseok-kwak</span></span>
         </a>
 
-        <a class="contact-item" href="tel:+447707756836">
-          <div class="contact-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.92z"/></svg>
-          </div>
-          <div>
-            <p class="contact-label">Phone (UK)</p>
-            <p class="contact-value">+44 77077 56836</p>
-          </div>
+        <a class="ct reveal" href="tel:+447707756836">
+          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.92z"/></svg></span>
+          <span><span class="ct-lab mono">Phone (UK)</span><br><span class="ct-val">+44 7707 756836</span></span>
         </a>
 
       </div>
@@ -576,10 +614,161 @@
 </main>
 
 <footer>
-  <div class="container">
-    <p>&copy; 2025 Minseok Kwak &mdash; Built with HTML &amp; CSS</p>
+  <div class="wrap foot-row">
+    <span class="mono">© 2025 MINSEOK KWAK</span>
+    <span class="mono"><b>STATUS:</b> SYSTEM NOMINAL · LONDON</span>
   </div>
 </footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── Subtle scroll reveals ── */
+  var items = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e, i) {
+        if (e.isIntersecting) {
+          var el = e.target;
+          // gentle stagger within a viewport batch
+          el.style.transitionDelay = (Math.min(i, 4) * 0.05) + 's';
+          el.classList.add('in');
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+  } else {
+    items.forEach(function (el) { el.classList.add('in'); });
+  }
+
+  /* ── Hero depth field — point cloud with near=warm / far=cool coloring ── */
+  var canvas = document.getElementById('depthfield');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0, pts = [], mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+
+  var NEAR = [255, 125, 84], FAR = [54, 198, 210], MID = [199, 155, 208];
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rampColor(z) {
+    // z: 0 (near/warm) → 1 (far/cool), passing through mid
+    var r, g, b;
+    if (z < 0.5) {
+      var t = z / 0.5;
+      r = lerp(NEAR[0], MID[0], t); g = lerp(NEAR[1], MID[1], t); b = lerp(NEAR[2], MID[2], t);
+    } else {
+      var t2 = (z - 0.5) / 0.5;
+      r = lerp(MID[0], FAR[0], t2); g = lerp(MID[1], FAR[1], t2); b = lerp(MID[2], FAR[2], t2);
+    }
+    return [r | 0, g | 0, b | 0];
+  }
+
+  function build() {
+    var rect = canvas.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var area = W * H;
+    var count = Math.max(36, Math.min(110, Math.round(area / 16000)));
+    pts = [];
+    for (var i = 0; i < count; i++) {
+      var z = Math.random();              // depth
+      pts.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        z: z,
+        r: lerp(0.7, 2.6, 1 - z),         // near points larger
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        ph: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  var maxLink = 132, maxLink2 = maxLink * maxLink;
+  function frame(ts) {
+    ctx.clearRect(0, 0, W, H);
+    mouse.x += (mouse.tx - mouse.x) * 0.05;
+    mouse.y += (mouse.ty - mouse.y) * 0.05;
+    var px = (mouse.x - 0.5), py = (mouse.y - 0.5);
+
+    // ambient drift
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10; if (p.y > H + 10) p.y = -10;
+    }
+
+    // faint links between nearby points (depth-graded) — evokes a sparse mesh
+    for (var a = 0; a < pts.length; a++) {
+      var pa = pts[a];
+      var ax = pa.x + px * (1 - pa.z) * 46;
+      var ay = pa.y + py * (1 - pa.z) * 46;
+      for (var b = a + 1; b < pts.length; b++) {
+        var pb = pts[b];
+        var bx = pb.x + px * (1 - pb.z) * 46;
+        var by = pb.y + py * (1 - pb.z) * 46;
+        var dx = ax - bx, dy = ay - by, d2 = dx * dx + dy * dy;
+        if (d2 < maxLink2) {
+          var alpha = (1 - d2 / maxLink2) * 0.16;
+          var zc = (pa.z + pb.z) / 2;
+          var col = rampColor(zc);
+          ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + alpha + ')';
+          ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+        }
+      }
+    }
+
+    // points
+    for (var k = 0; k < pts.length; k++) {
+      var p = pts[k];
+      var ox = p.x + px * (1 - p.z) * 46;
+      var oy = p.y + py * (1 - p.z) * 46;
+      var twinkle = 0.55 + 0.45 * Math.sin(ts * 0.0009 + p.ph);
+      var col = rampColor(p.z);
+      var a2 = (0.28 + (1 - p.z) * 0.5) * twinkle;
+      ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + a2 + ')';
+      ctx.beginPath(); ctx.arc(ox, oy, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  var raf = null;
+  function start() { if (!raf && !reduce) raf = requestAnimationFrame(frame); }
+  function stop() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+
+  build();
+  if (reduce) {
+    // single static frame
+    for (var k = 0; k < pts.length; k++) {
+      var p = pts[k], col = rampColor(p.z);
+      ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + (0.3 + (1 - p.z) * 0.4) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    start();
+  }
+
+  window.addEventListener('resize', function () { build(); }, { passive: true });
+  window.addEventListener('mousemove', function (e) {
+    mouse.tx = e.clientX / window.innerWidth;
+    mouse.ty = e.clientY / Math.max(window.innerHeight, 1);
+  }, { passive: true });
+
+  // pause when hero off-screen to save battery
+  var hero = document.getElementById('hero');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) { e.isIntersecting ? start() : stop(); });
+    }, { threshold: 0.02 }).observe(hero);
+  }
+})();
+</script>
 
 </body>
 </html>
