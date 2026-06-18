@@ -3,12 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="SpatialMosaic — a multi-view VLM dataset and pipeline for spatial reasoning under partial visibility. CVPR 2026 submission." />
+  <meta name="description" content="SpatialMosaic: a large-scale multi-view VLM dataset and benchmark for spatial reasoning under partial visibility, occlusion, and low overlap." />
   <title>SpatialMosaic · Minseok Kwak</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="site.css" />
+  <link rel="stylesheet" href="cite.css" />
+  <style>
+    /* page-specific bits for the SpatialMosaic write-up */
+    .authors-full { color: var(--paper-dim); font-size: 14.5px; line-height: 1.75; margin-top: 1.1rem; }
+    .authors-full .me { color: var(--near); font-weight: 600; }
+    .authors-full sup { color: var(--mute); font-size: 10px; }
+    .affil { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.03em; color: var(--mute); margin-top: 0.5rem; }
+    .fig-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-top: 1.5rem; }
+    .fig-row figure { margin: 0; }
+    .fig-row img { width: 100%; display: block; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    @media (max-width: 640px) { .fig-row { grid-template-columns: 1fr; } }
+    .stat-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.6rem; }
+    .stat { flex: 1 1 130px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--panel), var(--ink-2)); padding: 1rem 1.1rem; }
+    .stat .num { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--paper); letter-spacing: -0.02em; }
+    .stat .num.warm { color: var(--near); }
+    .stat .num.cool { color: var(--far); }
+    .stat .cap { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); margin-top: 0.3rem; }
+    .vidwrap { margin-top: 1.6rem; }
+    .vidwrap video { width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #000; }
+    .bibtex { background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1rem 1.1rem; overflow-x: auto; margin-top: 1rem; }
+    .bibtex pre { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--paper-dim); line-height: 1.7; white-space: pre; margin: 0; }
+  </style>
 </head>
 <body>
 
@@ -36,13 +57,18 @@
       <p class="doc-eyebrow mono">CVPR 2026 Submission · arXiv:2512.23365</p>
       <h1 class="doc-title">SpatialMosaic: A Multi-view VLM Dataset for Partial Visibility</h1>
       <p class="doc-sub">
-        A multimodal 3D vision-language pipeline that learns spatial relations across multiple
-        views, targeting scenes with object occlusion and partial visibility without explicit
-        3D reconstruction.
+        A large-scale multi-view benchmark across indoor and outdoor scenes, built to evaluate
+        spatial reasoning under partial visibility, occlusion, and low-overlap conditions, from
+        fragmented visual observations.
       </p>
-      <p class="doc-authors"><b>Minseok Kwak</b> (second author) · VGI Lab, Seoul National University</p>
+      <p class="authors-full">
+        Kanghee Lee<sup>1</sup>, Injae Lee<sup>1</sup>, <span class="me">Minseok Kwak<sup>2</sup></span>,
+        Jungi Hong<sup>1</sup>, Sion Lee<sup>3</sup>, Kwonyoung Ryu<sup>4</sup>, Jaesik Park<sup>1</sup>
+      </p>
+      <p class="affil"><sup>1</sup> Seoul National University · <sup>2</sup> University College London · <sup>3</sup> Kyung Hee University · <sup>4</sup> POSTECH</p>
       <div class="doc-actions">
         <a class="btn btn-primary" href="https://arxiv.org/abs/2512.23365" target="_blank" rel="noopener">arXiv Paper <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-ghost" href="https://arxiv.org/pdf/2512.23365" target="_blank" rel="noopener">PDF <span aria-hidden="true">↗</span></a>
         <a class="btn btn-ghost" href="https://kanghee-lee.github.io/spatialmosaic/" target="_blank" rel="noopener">Project Page <span aria-hidden="true">↗</span></a>
       </div>
     </header>
@@ -50,56 +76,148 @@
     <div class="doc-body">
       <div class="prose">
 
+        <div class="vidwrap">
+          <video autoplay muted loop playsinline
+                 poster="https://kanghee-lee.github.io/spatialmosaic/static/images/Teaser_final_eccv_2.jpg">
+            <source src="https://kanghee-lee.github.io/spatialmosaic/static/videos/teaser_demo.mp4" type="video/mp4" />
+          </video>
+        </div>
+
         <div class="abstract">
-          <span class="lab mono">Abstract</span>
+          <span class="lab mono">Overview</span>
           <p>
-            SpatialMosaic is a multimodal 3D VLM pipeline that learns spatial relations under
-            multi-view scenarios, focusing on frames with object occlusion and partial visibility
-            where a single view is insufficient. Rather than relying on explicit 3D reconstruction,
-            the method integrates the VGGT foundation model into its architecture to recover spatial
-            structure implicitly, and performs among state-of-the-art models on VSI-Bench. The work
-            is accompanied by a large multi-view dataset and benchmark designed around occlusion and
-            edge-case visibility.
+            Multimodal LLMs are improving fast at 3D scene understanding, and a recent line of work
+            learns spatial reasoning directly from multi-view images, without explicit 3D
+            reconstruction. The cases that dominate real environments, however, stay under-explored:
+            an object may appear in only some of the views, sit behind another object, or the views
+            may barely overlap. SpatialMosaic targets exactly these conditions. A scalable multi-view
+            data-generation and annotation pipeline turns multi-view images and 3D point clouds into
+            geometrically grounded spatial-reasoning QA, producing a 2M-pair instruction-tuning
+            dataset and SpatialMosaic-Bench, a 1M-pair benchmark spanning six tasks across both indoor
+            and outdoor scenes. We also introduce SpatialMosaicVLM, a hybrid baseline that integrates a
+            3D reconstruction model as a geometry encoder inside a VLM for more robust spatial reasoning.
           </p>
         </div>
 
-        <div class="note">
-          <span class="dot" aria-hidden="true"></span>
-          <span>Full paper and code will be released after the review process.</span>
+        <div class="stat-row">
+          <div class="stat"><div class="num warm">2M</div><div class="cap">Training QA pairs</div></div>
+          <div class="stat"><div class="num cool">1M</div><div class="cap">Benchmark QA pairs</div></div>
+          <div class="stat"><div class="num">6</div><div class="cap">Benchmark tasks</div></div>
+          <div class="stat"><div class="num">2</div><div class="cap">Indoor + outdoor domains</div></div>
         </div>
 
-        <h2><span class="n">01</span> Summary</h2>
+        <h2><span class="n">01</span> The problem</h2>
         <p>
-          Standard vision-language models struggle when objects are only partially visible or
-          occluded across views, because the spatial relationships they need are spread across
-          frames rather than present in any single image. SpatialMosaic addresses this by learning
-          cross-view spatial locality directly, pairing a foundation-model backbone with a dataset
-          and benchmark built specifically around partial-visibility cases.
+          Existing multi-view benchmarks largely assume fully visible scenes or sequential inputs,
+          so they do not reflect realistic conditions where observations are sparse and incomplete.
+          In practice, a model has to reason from fragmented visual cues spread across viewpoints.
+          Humans integrate those incomplete observations into a coherent 3D picture; current MLLMs
+          often fail under the same conditions. SpatialMosaic isolates three under-explored
+          constraints that frequently arise in multi-view settings:
+        </p>
+        <ul>
+          <li><strong>Partial visibility</strong>: an object is visible only in a subset of the views.</li>
+          <li><strong>Occlusion</strong>: an object is partially occluded within a single view.</li>
+          <li><strong>Low overlap</strong>: the views share minimal cross-view overlap.</li>
+        </ul>
+
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/Teaser_final_eccv_2.jpg" alt="SpatialMosaic teaser and method overview" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 1 · Reasoning over partially visible, occluded, low-overlap multi-view observations.</figcaption>
+        </figure>
+
+        <h2><span class="n">02</span> Data generation pipeline</h2>
+        <p>
+          SpatialMosaic is built with a scalable multi-view pipeline. Given multi-view images and 3D
+          point clouds, it computes occlusion-aware spatial annotations and samples sparse viewpoints
+          to force reasoning from fragmented observations. Object instances are filtered by visibility
+          constraints, 3D spatial relations are derived from geometric cues, and task-specific
+          templates generate diverse, geometrically grounded QA pairs, yielding 2M training pairs plus
+          1M evaluation pairs in SpatialMosaic-Bench across indoor and outdoor environments.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/data_generation_pipeline_v7.jpg" alt="SpatialMosaic data generation pipeline" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 2 · Construction pipeline: occlusion-aware annotation, sparse-view sampling, visibility filtering, and templated QA generation.</figcaption>
+        </figure>
+
+        <h3>Measuring occlusion</h3>
+        <p>
+          To quantify occlusion under realistic multi-view conditions, the pipeline introduces an
+          occlusion ratio that captures both inter-object obstruction and field-of-view truncation.
+          Per-instance and full-scene depth maps are rendered from the multi-view images and compared
+          to decide whether each point is visible or occluded. From this it computes an
+          <strong>object occlusion ratio</strong> (the share of points occluded by other objects) and
+          a <strong>field-of-view occlusion ratio</strong> (truncation at image boundaries), giving a
+          unified, fine-grained handle on visibility during data generation.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/Occlusion_score_v13.jpg" alt="Occlusion score computation" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 3 · Object and field-of-view occlusion ratios from rendered depth comparisons.</figcaption>
+        </figure>
+
+        <h2><span class="n">03</span> SpatialMosaic-Bench</h2>
+        <p>
+          SpatialMosaic-Bench holds 1M QA pairs across six task categories, weighted toward medium-
+          and high-difficulty samples to stress multi-view spatial reasoning. The benchmark is
+          characterized along three axes: occlusion level, overlap level, and visibility level.
+        </p>
+        <div class="fig-row">
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_occlusion_v1.jpg" alt="Occlusion level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Occlusion level</figcaption>
+          </figure>
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_overlap_v1.jpg" alt="Overlap level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Overlap level</figcaption>
+          </figure>
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_visibility_v1.jpg" alt="Visibility level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Visibility level</figcaption>
+          </figure>
+        </div>
+
+        <h2><span class="n">04</span> Data samples</h2>
+        <p>
+          Tasks span counting, best-view selection, localization, and relative-position reasoning.
+          Indoor scenes are built from ScanNet++; outdoor scenes from Waymo.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/indoor/proj_page_count.jpg" alt="Indoor multi-view counting QA example" loading="lazy" />
+          <figcaption class="fig-cap">INDOOR (ScanNet++) · "How many plant pots are visible across these frames?"</figcaption>
+        </figure>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/outdoor/proj_page_out_count.jpg" alt="Outdoor multi-view counting QA example" loading="lazy" />
+          <figcaption class="fig-cap">OUTDOOR (Waymo) · "How many vehicles are visible across these frames?"</figcaption>
+        </figure>
+
+        <h2><span class="n">05</span> SpatialMosaicVLM</h2>
+        <p>
+          Alongside the dataset, we introduce SpatialMosaicVLM, a new baseline for the multi-view
+          setting. It is a hybrid framework that integrates a 3D reconstruction model as a geometry
+          encoder within the VLM, giving the language model explicit geometric grounding for more
+          robust spatial reasoning. Across extensive experiments, training on SpatialMosaic measurably
+          improves spatial reasoning under challenging multi-view conditions, validating the data
+          pipeline's ability to produce realistic, geometrically grounded QA.
         </p>
 
-        <!-- NOTE: these summary images are currently hot-linked from your Vercel site.
-             For a fully self-hosted GitHub Pages build, save them locally (e.g. assets/mosaic-1.jpg)
-             and update the src paths below. -->
-        <figure class="figure">
-          <img src="https://minseok-kwak.vercel.app/pdf/mosaic1.jpg" alt="SpatialMosaic summary, page 1" loading="lazy" />
-          <figcaption class="fig-cap">FIG. 1 — Summary, page 1</figcaption>
-        </figure>
-        <figure class="figure">
-          <img src="https://minseok-kwak.vercel.app/pdf/mosaic2.jpg" alt="SpatialMosaic summary, page 2" loading="lazy" />
-          <figcaption class="fig-cap">FIG. 2 — Summary, page 2</figcaption>
-        </figure>
-        <figure class="figure">
-          <img src="https://minseok-kwak.vercel.app/pdf/mosaic3.jpg" alt="SpatialMosaic summary, page 3" loading="lazy" />
-          <figcaption class="fig-cap">FIG. 3 — Summary, page 3</figcaption>
-        </figure>
+        <h2><span class="n">06</span> Citation</h2>
+        <div class="bibtex">
+<pre>@article{lee2025spatialmosaic,
+  title   = {SpatialMosaic: A Multiview VLM Dataset for Partial Visibility},
+  author  = {Lee, Kanghee and Lee, Injae and Kwak, Minseok and
+             Ryu, Kwonyoung and Hong, Jungi and Park, Jaesik},
+  journal = {arXiv preprint arXiv:2512.23365},
+  year    = {2025}
+}</pre>
+        </div>
 
         <div class="kw">
           <span class="lab mono">Keywords</span>
           <div class="tags">
-            <span class="tag">3D VLM</span><span class="tag">Multimodal Input</span>
-            <span class="tag">Spatial Locality Prediction</span><span class="tag">Edge-Case Scenarios</span>
-            <span class="tag">VQA</span><span class="tag">Foundation Model</span>
-            <span class="tag">2M Dataset</span><span class="tag">CVPR</span>
+            <span class="tag">Multi-view Spatial Reasoning</span><span class="tag">Vision-Language Models</span>
+            <span class="tag">Partial Visibility</span><span class="tag">Occlusion</span>
+            <span class="tag">Low Overlap</span><span class="tag">Instruction Tuning</span>
+            <span class="tag">VQA</span><span class="tag">2M Dataset</span><span class="tag">Benchmark</span>
           </div>
         </div>
 
@@ -114,6 +232,6 @@
   </div>
 </main>
 
-<script src="site.js"></script>
+<script src="cite.js"></script>
 </body>
 </html>
