@@ -459,8 +459,34 @@
     .stat .num.warm { color: var(--near); }
     .stat .num.cool { color: var(--far); }
     .stat .cap { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); margin-top: 0.3rem; }
-    .vidwrap { margin-top: 1.6rem; }
+    .vidwrap { margin-top: 1.6rem; position: relative; }
     .vidwrap video { width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #000; }
+    .video-overlay {
+      position: absolute; inset: 0; border: 0; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(ellipse at center, rgba(10,16,20,0.15), rgba(10,16,20,0.62));
+      transition: opacity 0.35s var(--ease), background 0.25s var(--ease);
+    }
+    .video-overlay:hover { background: radial-gradient(ellipse at center, rgba(10,16,20,0.1), rgba(10,16,20,0.5)); }
+    .video-overlay.hidden { opacity: 0; pointer-events: none; }
+    .play-btn {
+      width: 86px; height: 86px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--near); color: var(--ink);
+      box-shadow: 0 10px 40px rgba(255,125,84,0.35), 0 0 0 0 rgba(255,125,84,0.45);
+      animation: playpulse 2.4s ease-out infinite;
+      transition: transform 0.2s var(--ease), background 0.2s var(--ease);
+    }
+    .video-overlay:hover .play-btn { transform: scale(1.09); background: var(--far); box-shadow: 0 10px 44px rgba(54,198,210,0.4); }
+    .play-btn svg { width: 32px; height: 32px; margin-left: 5px; fill: currentColor; }
+    .play-label { color: var(--paper); letter-spacing: 0.16em; }
+    @keyframes playpulse {
+      0%   { box-shadow: 0 10px 40px rgba(255,125,84,0.35), 0 0 0 0 rgba(255,125,84,0.45); }
+      70%  { box-shadow: 0 10px 40px rgba(255,125,84,0.2), 0 0 0 24px rgba(255,125,84,0); }
+      100% { box-shadow: 0 10px 40px rgba(255,125,84,0.2), 0 0 0 0 rgba(255,125,84,0); }
+    }
+    @media (prefers-reduced-motion: reduce) { .play-btn { animation: none; } }
     .bibtex { background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1rem 1.1rem; overflow-x: auto; margin-top: 1rem; }
     .bibtex pre { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--paper-dim); line-height: 1.7; white-space: pre; margin: 0; }
   </style>
@@ -511,10 +537,14 @@
       <div class="prose">
 
         <div class="vidwrap">
-          <video controls autoplay muted loop playsinline preload="metadata"
+          <video controls playsinline preload="metadata"
                  poster="https://kanghee-lee.github.io/spatialmosaic/static/images/Teaser_final_eccv_2.jpg">
             <source src="https://kanghee-lee.github.io/spatialmosaic/static/videos/teaser_demo.mp4" type="video/mp4" />
           </video>
+          <button class="video-overlay" type="button" aria-label="Play teaser video">
+            <span class="play-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="play-label mono">Play with sound</span>
+          </button>
         </div>
 
         <div class="abstract">
@@ -816,5 +846,23 @@
 })();
 
 </script>
+<script>
+(function () {
+  var v = document.querySelector('.vidwrap video');
+  var overlay = document.querySelector('.video-overlay');
+  if (!v || !overlay) return;
+  function startWithSound() {
+    v.muted = false;
+    v.volume = 1.0;            // 1.0 is the element's maximum
+    var pr = v.play();
+    if (pr && pr.catch) pr.catch(function () {});
+    overlay.classList.add('hidden');
+  }
+  overlay.addEventListener('click', startWithSound);
+  // if playback starts via the native controls, hide the overlay too
+  v.addEventListener('play', function () { overlay.classList.add('hidden'); });
+})();
+</script>
+
 </body>
 </html>
