@@ -3,20 +3,485 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="SHADeS++ — self-consistent specular mask prediction with temporal alignment for monocular depth estimation in endoscopy." />
+  <meta name="description" content="SHADeS++: a specular-aware, end-to-end self-supervised monocular depth estimation framework for endoscopy with decomposition-guided inpainting and learned soft specular masks." />
   <title>SHADeS++ · Minseok Kwak</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="site.css" />
+  <style id="base-css">
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* base — deep slate with a blue-green cast, deliberately not pure black */
+      --ink: #0a1014;
+      --ink-2: #0d151b;
+      --panel: #111c23;
+      --panel-2: #16242d;
+      --line: rgba(180, 215, 230, 0.09);
+      --line-strong: rgba(180, 215, 230, 0.18);
+
+      /* text */
+      --paper: #e8eef1;
+      --paper-dim: #aebcc4;
+      --mute: #6f808a;
+      --faint: #46555e;
+
+      /* depth ramp — the signature duotone (near = warm, far = cool) */
+      --near: #ff7d54;   /* close surfaces */
+      --mid:  #c79bd0;   /* mid field */
+      --far:  #36c6d2;   /* distant */
+
+      --near-soft: rgba(255, 125, 84, 0.14);
+      --far-soft: rgba(54, 198, 210, 0.12);
+
+      --radius: 4px;
+      --radius-lg: 14px;
+      --maxw: 1080px;
+      --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Hanken Grotesk', system-ui, sans-serif;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 15.5px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* ambient plotting grid behind everything */
+    body::before {
+      content: "";
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 110% 80% at 50% 0%, #000 35%, transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse 110% 80% at 50% 0%, #000 35%, transparent 78%);
+      opacity: 0.5;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    a { color: inherit; }
+
+    /* ── STATUS BAR / NAV ── */
+    .statusbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 clamp(1.25rem, 4vw, 2.5rem); height: 52px;
+      background: rgba(10, 16, 20, 0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+      color: var(--paper); text-decoration: none;
+    }
+    .brand .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--near);
+      box-shadow: 0 0 0 3px var(--near-soft);
+    }
+    .status-meta { color: var(--faint); display: none; }
+    @media (min-width: 880px) { .status-meta { display: inline; } }
+
+    .nav-links { display: flex; gap: clamp(0.9rem, 2vw, 1.9rem); list-style: none; align-items: center; }
+    .nav-links a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--mute); text-decoration: none;
+      position: relative; padding: 4px 0;
+      transition: color 0.22s var(--ease);
+    }
+    .nav-links a::after {
+      content: ""; position: absolute; left: 0; right: 100%; bottom: -1px; height: 1px;
+      background: var(--far); transition: right 0.28s var(--ease);
+    }
+    .nav-links a:hover { color: var(--paper); }
+    .nav-links a:hover::after { right: 0; }
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .brand { font-size: 15px; }
+    }
+
+    /* ── LAYOUT ── */
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 2.5rem); position: relative; z-index: 1; }
+
+    section { position: relative; z-index: 1; padding: clamp(4.5rem, 9vw, 8rem) 0; }
+    .ruled { border-top: 1px solid var(--line); }
+
+    /* section eyebrow */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      color: var(--far); margin-bottom: 1.1rem;
+    }
+    .eyebrow::before {
+      content: ""; width: 22px; height: 1px; background: var(--far); display: inline-block;
+    }
+    .s-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 600;
+      letter-spacing: -0.025em; line-height: 1.08; color: var(--paper);
+    }
+    .s-desc { color: var(--paper-dim); font-size: 15px; margin-top: 0.75rem; max-width: 46ch; }
+
+    /* ── HERO ── */
+    #hero {
+      position: relative; min-height: 100svh;
+      display: flex; align-items: center;
+      padding-top: 80px; padding-bottom: 5rem;
+      overflow: hidden;
+    }
+    #depthfield {
+      position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%;
+      display: block;
+    }
+    #hero .wrap { z-index: 2; }
+    /* corner instrument ticks framing the hero viewport */
+    .viewport-frame { position: absolute; inset: 18px; z-index: 1; pointer-events: none; }
+    .vtick { position: absolute; width: 14px; height: 14px; border: 1px solid var(--line-strong); }
+    .vtick.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .vtick.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .vtick.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .vtick.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    .hero-eyebrow { color: var(--mute); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .hero-eyebrow b { color: var(--far); font-weight: 400; }
+    .hero-name {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(3rem, 10vw, 6rem);
+      font-weight: 700; line-height: 0.94; letter-spacing: -0.04em;
+      color: var(--paper);
+    }
+    .hero-name .accent { color: transparent; -webkit-text-stroke: 1.4px var(--paper-dim); }
+    .hero-sub {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.05rem, 3vw, 1.5rem); font-weight: 400;
+      color: var(--paper-dim); margin-top: 1.1rem; letter-spacing: -0.01em;
+    }
+    .hero-sub .swap { color: var(--near); }
+    .hero-bio {
+      font-size: 16px; color: var(--paper-dim); max-width: 52ch;
+      margin-top: 1.6rem; line-height: 1.78;
+    }
+    .hero-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 2.2rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; letter-spacing: 0.06em; text-decoration: none;
+      cursor: pointer; border: 1px solid transparent;
+      transition: transform 0.22s var(--ease), background 0.22s var(--ease), border-color 0.22s var(--ease), color 0.22s var(--ease);
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--paper); color: var(--ink); }
+    .btn-primary:hover { background: var(--far); }
+    .btn-ghost { color: var(--paper-dim); border-color: var(--line-strong); background: transparent; }
+    .btn-ghost:hover { color: var(--paper); border-color: var(--far); background: var(--far-soft); }
+    .btn .arr { transition: transform 0.22s var(--ease); }
+    .btn:hover .arr { transform: translate(2px, -2px); }
+
+    /* depth ramp legend — signature */
+    .ramp {
+      margin-top: 3rem; max-width: 420px;
+      display: grid; grid-template-columns: 1fr; gap: 0.5rem;
+    }
+    .ramp-bar {
+      height: 8px; border-radius: 99px;
+      background: linear-gradient(90deg, var(--near), var(--mid) 52%, var(--far));
+      box-shadow: 0 0 22px rgba(54,198,210,0.18);
+    }
+    .ramp-labels { display: flex; justify-content: space-between; color: var(--mute); }
+    .ramp-labels b { color: var(--paper-dim); font-weight: 500; }
+
+    /* ── ABOUT ── */
+    .about-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 2.8rem; }
+    @media (min-width: 760px) { .about-grid { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.6rem 1.7rem;
+      transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
+    }
+    .card:hover { border-color: var(--line-strong); }
+    .card h3 {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 16px; font-weight: 600; color: var(--paper); margin-bottom: 0.7rem;
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .card h3 .k { color: var(--near); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .card p { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; }
+
+    .facts { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem; }
+    .fact {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em;
+      color: var(--paper-dim);
+      border: 1px solid var(--line); border-radius: 99px; padding: 6px 13px;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .fact i { width: 5px; height: 5px; border-radius: 50%; background: var(--far); font-style: normal; }
+    .fact.warm i { background: var(--near); }
+
+    /* ── EXPERIENCE (true chronological sequence) ── */
+    .timeline { margin-top: 2.8rem; }
+    .t-item {
+      display: grid; grid-template-columns: 1fr; gap: 0.4rem 2rem;
+      padding: 2rem 0; border-top: 1px solid var(--line);
+      position: relative;
+    }
+    @media (min-width: 720px) { .t-item { grid-template-columns: 150px 1fr; } }
+    .t-item:first-child { border-top: none; }
+    .t-when { color: var(--mute); padding-top: 4px; }
+    .t-when .yr { color: var(--paper); font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; letter-spacing: 0; display:block; }
+    .t-org { color: var(--far); margin-bottom: 0.5rem; }
+    .t-role {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 18px; font-weight: 600; color: var(--paper);
+      letter-spacing: -0.015em; margin-bottom: 0.7rem;
+    }
+    .t-body { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; margin-bottom: 1.1rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.03em;
+      color: var(--mute); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 3px 9px; transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+    }
+    .t-item:hover .tag, .pj:hover .tag { color: var(--paper-dim); border-color: var(--line-strong); }
+
+    /* ── PROJECTS ── */
+    .pj-grid { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 2.8rem; }
+    .pj {
+      position: relative; display: block; text-decoration: none;
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.7rem 1.8rem; overflow: hidden;
+      transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
+    }
+    .pj::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: linear-gradient(180deg, var(--near), var(--far));
+      transform: scaleY(0); transform-origin: top; transition: transform 0.35s var(--ease);
+    }
+    .pj:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+    .pj:hover::before { transform: scaleY(1); }
+    .pj.feature { padding: 2rem 1.9rem; }
+    .pj-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .pj-meta { color: var(--far); margin-bottom: 0.6rem; }
+    .pj.feature .pj-meta { color: var(--near); }
+    .pj-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.05rem, 2.4vw, 1.3rem); font-weight: 600;
+      color: var(--paper); letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 0.7rem;
+    }
+    .pj-desc { font-size: 14.5px; color: var(--paper-dim); line-height: 1.78; margin-bottom: 1.1rem; max-width: 64ch; }
+    .pj-arr { color: var(--faint); font-size: 17px; flex-shrink: 0; transition: transform 0.25s var(--ease), color 0.25s var(--ease); }
+    .pj:hover .pj-arr { color: var(--far); transform: translateX(4px); }
+    .pj-links { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+    /* card call-to-action — signals the whole card opens a detail page */
+    .pj-cta {
+      display: inline-flex; align-items: center; gap: 0;
+      margin-top: 1.2rem; color: var(--mute);
+      transition: color 0.22s var(--ease), letter-spacing 0.22s var(--ease);
+    }
+    .pj:hover .pj-cta { color: var(--far); letter-spacing: 0.17em; }
+    .pj.feature .pj-cta:not(:hover) { color: var(--near); }
+    .pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em;
+      color: var(--paper-dim); border: 1px solid var(--line-strong); border-radius: var(--radius);
+      padding: 6px 13px; text-decoration: none; transition: all 0.2s var(--ease);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .pill:hover { color: var(--ink); background: var(--far); border-color: var(--far); }
+
+    /* ── CONTACT ── */
+    .contact-grid { display: grid; grid-template-columns: 1fr; gap: 0.8rem; margin-top: 2.8rem; }
+    @media (min-width: 620px) { .contact-grid { grid-template-columns: 1fr 1fr; } }
+    .ct {
+      display: flex; align-items: center; gap: 14px; text-decoration: none;
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem; transition: border-color 0.22s var(--ease), transform 0.22s var(--ease);
+    }
+    .ct:hover { border-color: var(--far); transform: translateY(-2px); }
+    .ct-ic {
+      width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+      background: var(--far-soft); display: flex; align-items: center; justify-content: center;
+    }
+    .ct:hover .ct-ic { background: var(--near-soft); }
+    .ct-ic svg { width: 17px; height: 17px; stroke: var(--far); transition: stroke 0.22s var(--ease); }
+    .ct:hover .ct-ic svg { stroke: var(--near); }
+    .ct-lab { color: var(--mute); margin-bottom: 2px; }
+    .ct-val { font-size: 13.5px; color: var(--paper); font-weight: 500; word-break: break-all; }
+
+    /* ── FOOTER ── */
+    footer { padding: 3rem 0 3.5rem; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+    .foot-row { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; }
+    .foot-row .mono { color: var(--faint); }
+    .foot-row .mono b { color: var(--mute); font-weight: 400; }
+
+    /* ── REVEAL (subtle) ── */
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    /* hero load stagger */
+    .h-anim { opacity: 0; transform: translateY(16px); animation: rise 0.8s var(--ease) forwards; }
+    .h-anim.d1 { animation-delay: 0.05s; }
+    .h-anim.d2 { animation-delay: 0.15s; }
+    .h-anim.d3 { animation-delay: 0.25s; }
+    .h-anim.d4 { animation-delay: 0.35s; }
+    .h-anim.d5 { animation-delay: 0.48s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    :focus-visible { outline: 2px solid var(--far); outline-offset: 3px; border-radius: 2px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+      .h-anim { opacity: 1; transform: none; }
+    }
+
+    /* ───────────────────────────────────────────────
+       DETAIL / ABSTRACT PAGES
+       ─────────────────────────────────────────────── */
+    .doc-main { padding-top: 52px; }
+    .doc-wrap { max-width: 760px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 2.5rem); position: relative; z-index: 1; }
+
+    .backlink {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--mute); text-decoration: none;
+      margin: 2.6rem 0 0; transition: color 0.2s var(--ease), gap 0.2s var(--ease);
+    }
+    .backlink:hover { color: var(--paper); gap: 12px; }
+    .backlink .ar { color: var(--far); }
+
+    .doc-head { padding: 2.2rem 0 2.4rem; border-bottom: 1px solid var(--line); }
+    .doc-eyebrow { color: var(--far); display: inline-flex; gap: 0.55rem; align-items: center; margin-bottom: 1.1rem; }
+    .doc-eyebrow.warm { color: var(--near); }
+    .doc-eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+    .doc-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.9rem, 5vw, 2.9rem); font-weight: 700;
+      line-height: 1.06; letter-spacing: -0.03em; color: var(--paper);
+    }
+    .doc-sub { color: var(--paper-dim); font-size: 1.05rem; margin-top: 0.9rem; max-width: 60ch; line-height: 1.6; }
+    .doc-authors { color: var(--mute); font-size: 14px; margin-top: 1.1rem; }
+    .doc-authors b { color: var(--paper); font-weight: 600; }
+    .doc-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.8rem; }
+    .doc-actions .btn { padding: 10px 17px; }
+
+    .doc-body { padding: 2.6rem 0 1rem; }
+    .prose { color: var(--paper-dim); font-size: 16px; line-height: 1.82; }
+    .prose > * + * { margin-top: 1.15rem; }
+    .prose h2 {
+      font-family: 'Bricolage Grotesque', sans-serif; color: var(--paper);
+      font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em;
+      margin-top: 2.6rem; margin-bottom: 0.2rem; line-height: 1.2;
+      display: flex; align-items: baseline; gap: 0.7rem;
+    }
+    .prose h2 .n { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--far); letter-spacing: 0.06em; }
+    .prose h3 { font-family: 'Bricolage Grotesque', sans-serif; color: var(--paper); font-size: 1.08rem; font-weight: 600; margin-top: 1.8rem; }
+    .prose strong { color: var(--paper); font-weight: 600; }
+    .prose a { color: var(--far); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+    .prose a:hover { border-color: var(--far); }
+    .prose ul, .prose ol { padding-left: 1.3rem; }
+    .prose li { margin-top: 0.5rem; }
+    .prose li::marker { color: var(--far); }
+
+    /* lead/abstract block */
+    .abstract {
+      background: linear-gradient(180deg, var(--panel), var(--ink-2));
+      border: 1px solid var(--line); border-left: 3px solid var(--far);
+      border-radius: var(--radius-lg); padding: 1.5rem 1.6rem; margin-top: 1.5rem;
+    }
+    .abstract .lab { color: var(--far); margin-bottom: 0.7rem; display: block; }
+    .abstract p { font-size: 15px; color: var(--paper-dim); line-height: 1.8; }
+
+    /* callout / status note */
+    .note {
+      display: flex; gap: 0.8rem; align-items: flex-start;
+      background: var(--near-soft); border: 1px solid rgba(255,125,84,0.22);
+      border-radius: var(--radius-lg); padding: 1rem 1.2rem; margin-top: 1.6rem;
+      font-size: 14px; color: var(--paper-dim);
+    }
+    .note .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--near); margin-top: 8px; flex-shrink: 0; box-shadow: 0 0 0 3px var(--near-soft); }
+
+    /* equation block */
+    .eq {
+      overflow-x: auto; padding: 0.4rem 0.2rem; margin-top: 0.6rem;
+      color: var(--paper);
+    }
+    mjx-container { color: var(--paper) !important; }
+
+    /* figures + video */
+    .figure { margin-top: 1.8rem; }
+    .figure img { width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); }
+    .fig-cap { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: var(--mute); margin-top: 0.7rem; }
+    .embed { position: relative; width: 100%; aspect-ratio: 16/9; margin-top: 1.8rem; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line); }
+    .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+    .kw { margin-top: 2.4rem; }
+    .kw .lab { color: var(--mute); display: block; margin-bottom: 0.8rem; }
+
+    .doc-foot { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+
+    @media (max-width: 700px) {
+      .prose h2 { flex-direction: column; gap: 0.1rem; }
+    }
+
+</style>
   <script>
     window.MathJax = {
       tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']] },
-      svg: { fontCache: 'global' },
       options: { renderActions: { addMenu: [] } }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  <style>
+    /* page-specific bits for the SHADeS++ write-up */
+    .stat-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.6rem; }
+    .stat { flex: 1 1 130px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--panel), var(--ink-2)); padding: 1rem 1.1rem; }
+    .stat .num { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--paper); letter-spacing: -0.02em; }
+    .stat .num.warm { color: var(--near); }
+    .stat .num.cool { color: var(--far); }
+    .stat .cap { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); margin-top: 0.3rem; line-height: 1.5; }
+    /* image placeholder slot — auto-fills once the named file is uploaded */
+    .ph-box { aspect-ratio: 16 / 9; width: 100%; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, var(--panel), var(--ink-2)); flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; text-align: center; padding: 1.2rem; }
+    .ph-box .ph-ic { font-size: 1.8rem; color: var(--faint); line-height: 1; }
+    .ph-box .ph-name { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.05em; color: var(--paper-dim); }
+    .ph-box .ph-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); }
+    /* data tables */
+    .tablewrap { overflow-x: auto; margin-top: 1.5rem; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+    .dtable { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+    .dtable th, .dtable td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+    .dtable th { color: var(--mute); font-weight: 500; letter-spacing: 0.03em; background: var(--ink-2); }
+    .dtable td:first-child, .dtable th:first-child { text-align: left; color: var(--paper-dim); }
+    .dtable tr:last-child td { border-bottom: none; }
+    .dtable tr.best td { background: var(--near-soft); color: var(--paper); font-weight: 600; }
+    .dtable tr.best td:first-child { color: var(--near); }
+    .dtable tr.rule td { border-bottom: 1px solid var(--line-strong); }
+    .tcap { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--mute); margin-top: 0.7rem; letter-spacing: 0.02em; line-height: 1.6; }
+    .lw { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin-top: 1.4rem; }
+    .lw .cell { border: 1px solid var(--line); border-radius: 8px; background: var(--ink-2); padding: 0.7rem 0.85rem; }
+    .lw .cell .k { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--far); }
+    .lw .cell .v { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.05rem; color: var(--paper); font-weight: 600; }
+    .lw .cell .d { font-size: 11px; color: var(--mute); margin-top: 2px; }
+  </style>
 </head>
 <body>
 
@@ -41,15 +506,15 @@
     <a class="backlink" href="index.html#projects"><span class="ar">←</span> Back to work</a>
 
     <header class="doc-head">
-      <p class="doc-eyebrow mono warm">UCL Final Year Project · Targeting publication May 2026</p>
-      <h1 class="doc-title">SHADeS++: Self-Consistent Specular Mask Prediction with Temporal Alignment</h1>
+      <p class="doc-eyebrow mono warm">UCL Final Year Project · BSc Computer Science</p>
+      <h1 class="doc-title">SHADeS++: Specular-Aware Monocular Depth Estimation in Endoscopy</h1>
       <p class="doc-sub">
-        An improved formulation of specular-aware monocular depth estimation for endoscopy,
-        replacing rigid binary masks with soft, temporally consistent specular weighting.
+        Decomposition-guided inpainting and self-supervised soft specular mask learning for robust
+        depth estimation under specular distortions and environmental artifacts.
       </p>
-      <p class="doc-authors"><b>Minseok Kwak</b> · UCL · Supervisor: Francisco Vasconcelos</p>
+      <p class="doc-authors"><b>Minseok Kwak</b> · UCL · Supervisor: Francisco Vasconcelos · Submitted April 2026</p>
       <div class="doc-actions">
-        <a class="btn btn-primary" href="https://github.com/mkwak13/SHADeSpp" target="_blank" rel="noopener">SHADeS++ Code <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-primary" href="shadespp.pdf" target="_blank" rel="noopener">Read full report (PDF) <span aria-hidden="true">↗</span></a>
         <a class="btn btn-ghost" href="https://arxiv.org/abs/2502.12994" target="_blank" rel="noopener">Original SHADeS Paper <span aria-hidden="true">↗</span></a>
       </div>
     </header>
@@ -57,121 +522,256 @@
     <div class="doc-body">
       <div class="prose">
 
+        <figure class="figure">
+          <img src="shades_overview.jpg" alt="SHADeS++ applied to a colonoscopy frame: input, soft specular mask, filtered image, depth map" loading="lazy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+          <div class="ph-box" style="display:none">
+            <div class="ph-ic" aria-hidden="true">▦</div>
+            <div class="ph-name">shades_overview.jpg</div>
+            <div class="ph-sub">Upload to repo root to display</div>
+          </div>
+          <figcaption class="fig-cap">FIG. 1 · SHADeS++ on a colonoscopy frame: input \(I_t\), soft specular mask \(M_\text{soft}\), specular-filtered image \(I_\text{filt}\), and predicted depth \(D_t\).</figcaption>
+        </figure>
+
         <div class="abstract">
           <span class="lab mono">Abstract</span>
           <p>
-            Specular reflections significantly degrade the performance of monocular depth estimation
-            models, particularly in endoscopic and other specular-heavy environments where
-            photometric assumptions are frequently violated. Recent approaches such as SHADeS attempt
-            to explicitly model specular components using auxiliary reprojection constraints, but
-            remain limited by overly rigid masking strategies and unstable training dynamics. We
-            present SHADeS++, an improved formulation of specular-aware depth estimation that
-            introduces (i) a soft, temporally consistent specular masking mechanism and (ii) a
-            self-consistent reprojection objective that jointly refines diffuse and specular
-            components. Our method modifies the original SHADeS loss to replace hard binary masks
-            with a temperature-controlled soft weighting scheme, enabling smoother gradients and
-            improved generalization. Experiments on the C3VD dataset show that SHADeS++ achieves
-            lower validation loss and visually cleaner depth reconstructions under heavy specular
-            interference, while remaining compatible with the original SHADeS architecture.
+            Accurate 3D geometric understanding is critical for surgical applications, yet ground-truth
+            geometry is impractical to obtain in the operating room, so endoscopy relies on monocular
+            depth estimation. That estimation is far less accurate than in natural scenes because
+            specular reflections and environmental artifacts violate the photometric assumptions
+            self-supervised methods depend on. SHADeS++ upgrades the SHADeS framework by replacing its
+            detached specular detector and hyperparameter threshold with an internal, learnable soft
+            specular mask, making the whole pipeline end-to-end trainable. The mask is predicted directly
+            by the decomposition network and jointly optimized with the depth and decomposition
+            objectives. It drives a decomposition-guided inpainting strategy that reconstructs specular
+            regions from neighborhood reflectance, and it is folded into the photometric consistency loss
+            to suppress corrupted regions during training. Extensive experiments show that SHADeS++
+            significantly improves depth accuracy under specular distortion, and stays robust on more
+            recent, realistic endoscopic datasets where prior methods degrade sharply.
           </p>
         </div>
 
-        <h2><span class="n">01</span> Introduction</h2>
+        <div class="stat-row">
+          <div class="stat"><div class="num warm">0</div><div class="cap">Ground-truth depth labels</div></div>
+          <div class="stat"><div class="num cool">7-ch</div><div class="cap">Depth encoder input</div></div>
+          <div class="stat"><div class="num">2</div><div class="cap">Benchmarks · C3VD / C3VDv2</div></div>
+          <div class="stat"><div class="num">1.35</div><div class="cap">Best AbsRel on C3VD</div></div>
+        </div>
+
+        <h2><span class="n">01</span> The problem</h2>
         <p>
-          Monocular depth estimation has advanced rapidly with self-supervised frameworks based on
-          photometric reprojection. These methods, however, fundamentally rely on a brightness
-          constancy assumption that breaks down under specular reflection. In endoscopic imaging,
-          specular highlights are not only frequent but structured, producing systematic depth
-          errors rather than random noise. SHADeS addresses this by decomposing the input into
-          diffuse and specular components and applying reprojection constraints selectively. While
-          effective, the original formulation has two key limitations:
+          Self-supervised monocular depth methods reconstruct a target frame from neighboring source
+          frames as their training signal, assuming brightness constancy and Lambertian reflectance: the
+          same 3D point looks the same from any viewpoint. In endoscopy that assumption is violated
+          constantly by:
         </p>
-        <ol>
-          <li>Hard specular masking introduces discontinuous gradients and unstable optimization.</li>
-          <li>Frame-wise independent masking ignores temporal consistency, causing flickering artifacts and inconsistent depth predictions.</li>
-        </ol>
+        <ul>
+          <li>Specular highlights from wet tissue surfaces.</li>
+          <li>Fluids and mucus causing visual distortions.</li>
+          <li>Residual debris obscuring anatomical structures.</li>
+          <li>Non-Lambertian, view-dependent reflectance.</li>
+        </ul>
         <p>
-          These limitations motivate a refined formulation that preserves the core intuition of
-          SHADeS while improving optimization behavior and temporal robustness.
+          These artifacts are structured and spatially localized, so they inject systematically wrong
+          gradients into the photometric loss and push the depth network toward distorted geometry. The
+          original SHADeS partly addresses this with intrinsic decomposition, but it still relies on an
+          external, hard specular mask that is fixed before training and cannot be refined jointly with
+          depth. SHADeS++ is designed around five requirements: explicitly identify unreliable regions,
+          selectively attenuate them in the loss, represent specularity continuously rather than as a hard
+          threshold, preserve structure in corrupted regions instead of discarding it, and stay fully
+          self-supervised.
         </p>
 
         <h2><span class="n">02</span> Method</h2>
 
-        <h3>2.1 Overview</h3>
+        <h3>2.1 Non-Lambertian decomposition and a learned soft mask</h3>
         <p>
-          SHADeS++ retains the original SHADeS network architecture and focuses exclusively on
-          reformulating the loss functions and intermediate representations. The core idea is to
-          replace hard specular decisions with soft, temperature-controlled masks, and to enforce
-          self-consistency across time in the specular-aware reprojection process.
-        </p>
-
-        <h3>2.2 Specular Masking</h3>
-        <p>
-          In the original SHADeS formulation, the specular mask is a binary indicator that excludes
-          specular regions from the photometric loss. Let \( M_{\mathrm{hard}} \in \{0,1\}^{H \times W} \)
-          denote this mask. We instead define a soft specular mask:
+          SHADeS used a non-Lambertian image model \(I = A\cdot S + M\) where the specular term \(M\) is
+          produced externally by a pretrained inpainting module before training. SHADeS++ keeps the
+          non-Lambertian view but makes the specular component an internal output of the decomposition
+          network \(\phi_\text{decompose}\), learned jointly with everything else:
         </p>
         <div class="eq">
-          $$ M_{\mathrm{soft}} = \sigma\!\left( \frac{S - \mu}{\tau} \right) $$
+          $$ I = R_\text{diff}\cdot L_\text{field} + L_\text{field}\cdot M_\text{soft} $$
         </div>
-        <p>where:</p>
+        <p>
+          Here \(R_\text{diff}\) is the diffuse reflectance, \(L_\text{field}\) the illumination field, and
+          \(M_\text{soft}\in[0,1]\) a per-pixel specular probability from a sigmoid. Because no pixel-level
+          specular labels exist, \(M_\text{soft}\) is supervised by a brightness-derived prior. The image
+          brightness is high-pass filtered, then thresholded at its 97th percentile to mark sharp
+          specular peaks:
+        </p>
+        <div class="eq">
+          $$ B_\text{high} = \max\!\big(B - \text{AvgPool}_{9\times 9}(B),\, 0\big), \qquad \hat{M} = \mathbb{1}\!\left[\,B_\text{high} > \tau_{0.97}\,\right] $$
+        </div>
+        <p>
+          The soft mask is then aligned to this prior with a binary cross-entropy term, plus a total
+          variation penalty and a mask-ratio regularizer (target \(\rho = 0.15\)) that stabilizes early
+          training and prevents the mask from collapsing to all-zero or all-one:
+        </p>
+        <div class="eq">
+          $$ \mathcal{L}_\text{mask} = \text{BCE}(M_\text{soft},\, \hat{M}), \qquad \mathcal{L}_\text{ratio} = \big|\,\langle M_\text{soft}\rangle - \rho\,\big| $$
+        </div>
+
+        <h3>2.2 Decomposition-guided inpainting and the 7-channel input</h3>
+        <p>
+          Specular pixels are not zeroed out (which would create artificial dark holes) but reconstructed
+          from neighboring non-specular reflectance. Refining the raw reflectance and filling masked
+          pixels with a luminance-normalized neighborhood estimate \(\tilde{R}_\text{neigh}\) yields a
+          specular-free filtered image:
+        </p>
+        <div class="eq">
+          $$ R_\text{diff} = R\cdot(1 - M_\text{soft}) + M_\text{soft}\cdot \bar{R}_\text{neigh}, \qquad I_\text{filt} = I_t\cdot(1 - M_\text{soft}) + \tilde{R}_\text{neigh}\cdot M_\text{soft} $$
+        </div>
+        <p>
+          Rather than feeding only \(I_\text{filt}\) to the depth encoder, SHADeS++ concatenates it with the
+          reflectance and the mask into a seven-channel input, so the encoder sees a clean image, a
+          view-independent surface estimate, and an explicit map of which pixels were inpainted:
+        </p>
+        <div class="eq">
+          $$ x_\text{depth} = [\,I_\text{filt},\; R_\text{diff},\; M_\text{soft}\,] \in \mathbb{R}^{7\times H\times W} $$
+        </div>
+
+        <h3>2.3 Specular-aware reprojection</h3>
+        <p>
+          The composite reprojection mask is extended so a pixel only supervises depth if it is
+          non-specular in both the target and the warped source view, removing highlight contamination
+          from the photometric signal entirely:
+        </p>
+        <div class="eq">
+          $$ \mu = \mu_1 \odot \mu_2 \odot (1 - M_t)\odot(1 - M_\text{warp}) $$
+        </div>
+        <p>
+          The photometric reprojection loss itself follows the standard SSIM and \(\ell_1\) combination
+          with \(\alpha = 0.85\):
+        </p>
+        <div class="eq">
+          $$ \mathcal{L}_r(\hat{I}_{s\to t}, I_t) = \alpha\,\frac{1 - \text{SSIM}(\hat{I}_{s\to t}, I_t)}{2} + (1-\alpha)\,\big\lVert \hat{I}_{s\to t} - I_t \big\rVert_1 $$
+        </div>
+
+        <figure class="figure">
+          <img src="shades_pipeline.jpg" alt="SHADeS++ training pipeline and losses" loading="lazy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+          <div class="ph-box" style="display:none">
+            <div class="ph-ic" aria-hidden="true">▦</div>
+            <div class="ph-name">shades_pipeline.jpg</div>
+            <div class="ph-sub">Upload to repo root to display</div>
+          </div>
+          <figcaption class="fig-cap">FIG. 2 · Training pipeline: image decomposition, depth and pose estimation on the 7-channel input, and specular-aware reprojection and loss.</figcaption>
+        </figure>
+
+        <h2><span class="n">03</span> Training objective</h2>
+        <p>
+          All terms are optimized jointly. A spatially adaptive smoothness weight \(w_s = 1 + \beta\,M_\text{soft}\)
+          (\(\beta = 0.3\)) applies stronger regularization in specular regions, and the decomposition
+          reconstruction loss drops SSIM (keeping only \(\ell_1\)) so structure is not arbitrarily split
+          between reflectance and illumination. The full objective is:
+        </p>
+        <div class="eq">
+          $$ \mathcal{L} = \lambda_r \mathcal{L}_r \odot \mu + \lambda_d \mathcal{L}_d + \lambda_{es}\mathcal{L}_{es} + \mathcal{L}_\text{mask} + \mathcal{L}_\text{light} $$
+        </div>
+        <div class="lw">
+          <div class="cell"><div class="k">λr</div><div class="v">1.0</div><div class="d">Reprojection</div></div>
+          <div class="cell"><div class="k">λd</div><div class="v">0.3</div><div class="d">Decomp. recon.</div></div>
+          <div class="cell"><div class="k">λes</div><div class="v">0.01</div><div class="d">Disparity smooth</div></div>
+          <div class="cell"><div class="k">λbce</div><div class="v">0.2</div><div class="d">Mask BCE</div></div>
+          <div class="cell"><div class="k">λtv</div><div class="v">0.005</div><div class="d">Mask TV</div></div>
+          <div class="cell"><div class="k">λratio</div><div class="v">0.02</div><div class="d">Mask sparsity</div></div>
+          <div class="cell"><div class="k">λlight</div><div class="v">0.05</div><div class="d">Illum. smooth</div></div>
+          <div class="cell"><div class="k">β</div><div class="v">0.3</div><div class="d">Specular smooth</div></div>
+          <div class="cell"><div class="k">ρ</div><div class="v">0.15</div><div class="d">Mask target</div></div>
+        </div>
+        <p class="tcap">
+          ResNet-18 backbones, U-Net decoder, trained from scratch for 20 epochs (Adam, lr \(5\times10^{-5}\),
+          batch 8, inputs 288×288, frames \(\{-1,0,+1\}\), four scales) on 4× NVIDIA Quadro RTX 6000.
+        </p>
+
+        <h2><span class="n">04</span> Results</h2>
+        <p>
+          SHADeS++ is evaluated with standard depth metrics (lower is better for errors, higher for the
+          \(\delta<1.25^k\) accuracies \(a_1,a_2,a_3\)) under median scaling. On the standard C3VD benchmark
+          it is best on every reported metric, including over the strongest SHADeS variant.
+        </p>
+        <div class="tablewrap">
+          <table class="dtable">
+            <thead><tr><th>Method</th><th>AbsRel↓</th><th>SqRel↓</th><th>RMSE↓</th><th>RMSElog↓</th><th>a1↑</th><th>a2↑</th><th>a3↑</th></tr></thead>
+            <tbody>
+              <tr><td>Monodepth2</td><td>1.48</td><td>0.23</td><td>0.50</td><td>1.81</td><td>0.62</td><td>0.92</td><td>0.98</td></tr>
+              <tr><td>MonoViT</td><td>1.49</td><td>0.29</td><td>0.59</td><td>1.78</td><td>0.63</td><td>0.92</td><td>0.99</td></tr>
+              <tr><td>IID-SfMLearner</td><td>1.58</td><td>0.29</td><td>0.54</td><td>1.99</td><td>0.61</td><td>0.90</td><td>0.98</td></tr>
+              <tr class="rule"><td>SHADeS (best variant)</td><td>1.40</td><td>0.22</td><td>0.50</td><td>1.72</td><td>0.65</td><td>0.93</td><td>0.99</td></tr>
+              <tr class="best"><td>SHADeS++</td><td>1.35</td><td>0.21</td><td>0.49</td><td>1.71</td><td>0.68</td><td>0.95</td><td>0.99</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="tcap">TABLE 1 · Depth estimation on C3VD. Baselines from Daher et al., rescaled to this protocol. Selected rows; full table in the report.</p>
+
+        <p>
+          The decisive result is on C3VDv2, a far more realistic benchmark with fecal debris, mucus,
+          blood, and fast motion. SHADeS degrades sharply there, while SHADeS++ stays stable, and it
+          generalizes cleanly in both cross-dataset directions.
+        </p>
+        <div class="tablewrap">
+          <table class="dtable">
+            <thead><tr><th>Train → Test</th><th>Method</th><th>AbsRel↓</th><th>SqRel↓</th><th>RMSE↓</th><th>a1↑</th><th>a2↑</th><th>a3↑</th></tr></thead>
+            <tbody>
+              <tr class="rule"><td>C3VDv2 → C3VDv2</td><td>SHADeS</td><td>1.534</td><td>0.250</td><td>0.511</td><td>0.631</td><td>0.862</td><td>0.969</td></tr>
+              <tr class="best"><td>C3VDv2 → C3VDv2</td><td>SHADeS++</td><td>1.357</td><td>0.218</td><td>0.500</td><td>0.669</td><td>0.927</td><td>0.982</td></tr>
+              <tr><td>C3VD → C3VDv2</td><td>SHADeS++</td><td>1.380</td><td>0.214</td><td>0.497</td><td>0.662</td><td>0.928</td><td>0.988</td></tr>
+              <tr><td>C3VDv2 → C3VD</td><td>SHADeS++</td><td>1.368</td><td>0.211</td><td>0.494</td><td>0.671</td><td>0.932</td><td>0.988</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="tcap">TABLE 2 · C3VDv2 (debris-filled v3 test) and cross-dataset generalization.</p>
+
+        <p>
+          An ablation isolates each component. Restoring the decomposition-guided input \(I_\text{filt}\)
+          gives the single largest jump, the learned mask beats a fixed brightness threshold, and
+          specular loss masking adds a further independent gain.
+        </p>
+        <div class="tablewrap">
+          <table class="dtable">
+            <thead><tr><th>Variant</th><th>AbsRel↓</th><th>SqRel↓</th><th>RMSE↓</th><th>a1↑</th><th>a2↑</th><th>a3↑</th></tr></thead>
+            <tbody>
+              <tr><td>SHADeS (baseline)</td><td>1.534</td><td>0.250</td><td>0.511</td><td>0.631</td><td>0.862</td><td>0.969</td></tr>
+              <tr><td>w/ hard mask</td><td>1.420</td><td>0.235</td><td>0.507</td><td>0.648</td><td>0.895</td><td>0.976</td></tr>
+              <tr><td>w/o I_filt</td><td>1.490</td><td>0.244</td><td>0.509</td><td>0.638</td><td>0.875</td><td>0.972</td></tr>
+              <tr class="rule"><td>w/o loss masking</td><td>1.390</td><td>0.225</td><td>0.503</td><td>0.658</td><td>0.912</td><td>0.979</td></tr>
+              <tr class="best"><td>SHADeS++ (full)</td><td>1.357</td><td>0.218</td><td>0.500</td><td>0.669</td><td>0.927</td><td>0.982</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="tcap">TABLE 3 · Ablation on C3VDv2. Performance improves monotonically toward the full model.</p>
+
+        <figure class="figure">
+          <img src="shades_results.jpg" alt="Qualitative depth comparison between SHADeS and SHADeS++ on C3VDv2" loading="lazy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+          <div class="ph-box" style="display:none">
+            <div class="ph-ic" aria-hidden="true">▦</div>
+            <div class="ph-name">shades_results.jpg</div>
+            <div class="ph-sub">Upload to repo root to display</div>
+          </div>
+          <figcaption class="fig-cap">FIG. 3 · Qualitative case on C3VDv2: SHADeS (center) produces an anomalous depth artifact that SHADeS++ (right) avoids, yielding spatially coherent geometry.</figcaption>
+        </figure>
+
+        <h2><span class="n">05</span> Key contributions</h2>
         <ul>
-          <li>\( S \) denotes the predicted specular intensity,</li>
-          <li>\( \mu \) is a learned or fixed threshold,</li>
-          <li>\( \tau \) is a temperature parameter controlling mask sharpness,</li>
-          <li>\( \sigma \) is the sigmoid function.</li>
+          <li>A specular-aware depth framework that jointly models reflectance, illumination, and a learned soft specular mask for better geometric reasoning.</li>
+          <li>A decomposition-guided inpainting strategy that builds a clean filtered image for depth prediction by reconstructing specular regions.</li>
+          <li>A self-supervised mask learning approach driven by brightness priors, removing the need for any specular annotation.</li>
+          <li>Specular awareness integrated directly into the photometric self-supervision, restricting depth supervision to reliable regions.</li>
+          <li>State-of-the-art robustness and cross-dataset generalization across challenging endoscopic benchmarks.</li>
         </ul>
-        <p>
-          This formulation ensures differentiability across all pixels, a gradual transition between
-          diffuse and specular regions, and stable gradients during early training. Empirically, we
-          find that \( \tau = 0.10 \) gives the best trade-off between selectivity and smoothness.
-        </p>
-
-        <h3>2.3 Self-Consistent Specular Reprojection</h3>
-        <p>
-          SHADeS introduces an auxiliary reprojection loss on the estimated specular component, but
-          applies it independently per frame. In SHADeS++, we enforce self-consistency by requiring
-          that the specular-aware reprojection remains stable across adjacent frames:
-        </p>
-        <div class="eq">
-          $$ \mathcal{L}_{\mathrm{SC}} = \left\lVert M_{\mathrm{soft}}^{t} \odot \left( I^{t} - \hat{I}_{\mathrm{diff}}^{t \leftarrow t+1} \right) - M_{\mathrm{soft}}^{t+1} \odot \left( I^{t+1} - \hat{I}_{\mathrm{diff}}^{t+1 \leftarrow t} \right) \right\rVert_{1} $$
-        </div>
-        <p>
-          This structure encourages temporal coherence in specular estimation, fewer artifacts in
-          depth maps, and more stable training dynamics.
-        </p>
-
-        <h3>2.4 Loss Function</h3>
-        <p>The final loss function is:</p>
-        <div class="eq">
-          $$ \mathcal{L} = \mathcal{L}_{\mathrm{photo}}^{\mathrm{soft}} + \lambda_{\mathrm{SC}} \mathcal{L}_{\mathrm{SC}} + \lambda_{\mathrm{smooth}} \mathcal{L}_{\mathrm{smooth}} $$
-        </div>
-        <p>
-          where the photometric loss is weighted by \( M_{\mathrm{soft}} \) rather than masked by a
-          binary indicator.
-        </p>
-
-        <h2><span class="n">03</span> Experiments</h2>
-        <h3>3.1 Dataset and Setup</h3>
-        <p>
-          We evaluate on the C3VD and Hyper-Kvasir datasets, which contain severe and frequent
-          specular reflections. Training and validation splits follow the original SHADeS protocol.
-          All experiments use identical architectures and hyperparameters, except for the proposed
-          loss modifications.
-        </p>
-
-        <div class="note">
-          <span class="dot" aria-hidden="true"></span>
-          <span>This is a condensed write-up. The full document is in preparation, with publication targeted for May 2026.</span>
-        </div>
 
         <div class="kw">
           <span class="lab mono">Keywords</span>
           <div class="tags">
-            <span class="tag">Specular Artifact</span><span class="tag">Endoscopy</span>
-            <span class="tag">Depth Estimation</span><span class="tag">Self-Consistent Learning</span>
-            <span class="tag">Medical Imaging</span><span class="tag">Surface Modeling</span>
-            <span class="tag">Photometric Loss</span><span class="tag">Temporal Consistency</span>
+            <span class="tag">Self-Supervised Learning</span><span class="tag">Monocular Depth Estimation</span>
+            <span class="tag">Specular Artifacts</span><span class="tag">Image Decomposition</span>
+            <span class="tag">Endoscopy</span><span class="tag">Medical Image Analysis</span>
+            <span class="tag">Non-Lambertian</span><span class="tag">PyTorch</span>
+            <span class="tag">U-Net</span><span class="tag">ResNet-18</span>
           </div>
         </div>
 
@@ -179,13 +779,162 @@
 
       <div class="doc-foot">
         <a class="backlink" href="index.html#projects" style="margin:0"><span class="ar">←</span> Back to work</a>
-        <span class="mono" style="color:var(--faint)">UCL FYP · 2026</span>
+        <span class="mono" style="color:var(--faint)">UCL FYP · Endoscopy · 2026</span>
       </div>
     </div>
 
   </div>
 </main>
 
-<script src="site.js"></script>
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── Subtle scroll reveals ── */
+  var items = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e, i) {
+        if (e.isIntersecting) {
+          var el = e.target;
+          // gentle stagger within a viewport batch
+          el.style.transitionDelay = (Math.min(i, 4) * 0.05) + 's';
+          el.classList.add('in');
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+  } else {
+    items.forEach(function (el) { el.classList.add('in'); });
+  }
+
+  /* ── Hero depth field — point cloud with near=warm / far=cool coloring ── */
+  var canvas = document.getElementById('depthfield');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0, pts = [], mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+
+  var NEAR = [255, 125, 84], FAR = [54, 198, 210], MID = [199, 155, 208];
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rampColor(z) {
+    // z: 0 (near/warm) → 1 (far/cool), passing through mid
+    var r, g, b;
+    if (z < 0.5) {
+      var t = z / 0.5;
+      r = lerp(NEAR[0], MID[0], t); g = lerp(NEAR[1], MID[1], t); b = lerp(NEAR[2], MID[2], t);
+    } else {
+      var t2 = (z - 0.5) / 0.5;
+      r = lerp(MID[0], FAR[0], t2); g = lerp(MID[1], FAR[1], t2); b = lerp(MID[2], FAR[2], t2);
+    }
+    return [r | 0, g | 0, b | 0];
+  }
+
+  function build() {
+    var rect = canvas.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var area = W * H;
+    var count = Math.max(36, Math.min(110, Math.round(area / 16000)));
+    pts = [];
+    for (var i = 0; i < count; i++) {
+      var z = Math.random();              // depth
+      pts.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        z: z,
+        r: lerp(0.7, 2.6, 1 - z),         // near points larger
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        ph: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  var maxLink = 132, maxLink2 = maxLink * maxLink;
+  function frame(ts) {
+    ctx.clearRect(0, 0, W, H);
+    mouse.x += (mouse.tx - mouse.x) * 0.05;
+    mouse.y += (mouse.ty - mouse.y) * 0.05;
+    var px = (mouse.x - 0.5), py = (mouse.y - 0.5);
+
+    // ambient drift
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10; if (p.y > H + 10) p.y = -10;
+    }
+
+    // faint links between nearby points (depth-graded) — evokes a sparse mesh
+    for (var a = 0; a < pts.length; a++) {
+      var pa = pts[a];
+      var ax = pa.x + px * (1 - pa.z) * 46;
+      var ay = pa.y + py * (1 - pa.z) * 46;
+      for (var b = a + 1; b < pts.length; b++) {
+        var pb = pts[b];
+        var bx = pb.x + px * (1 - pb.z) * 46;
+        var by = pb.y + py * (1 - pb.z) * 46;
+        var dx = ax - bx, dy = ay - by, d2 = dx * dx + dy * dy;
+        if (d2 < maxLink2) {
+          var alpha = (1 - d2 / maxLink2) * 0.16;
+          var zc = (pa.z + pb.z) / 2;
+          var col = rampColor(zc);
+          ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + alpha + ')';
+          ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+        }
+      }
+    }
+
+    // points
+    for (var k = 0; k < pts.length; k++) {
+      var p = pts[k];
+      var ox = p.x + px * (1 - p.z) * 46;
+      var oy = p.y + py * (1 - p.z) * 46;
+      var twinkle = 0.55 + 0.45 * Math.sin(ts * 0.0009 + p.ph);
+      var col = rampColor(p.z);
+      var a2 = (0.28 + (1 - p.z) * 0.5) * twinkle;
+      ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + a2 + ')';
+      ctx.beginPath(); ctx.arc(ox, oy, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  var raf = null;
+  function start() { if (!raf && !reduce) raf = requestAnimationFrame(frame); }
+  function stop() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+
+  build();
+  if (reduce) {
+    // single static frame
+    for (var k = 0; k < pts.length; k++) {
+      var p = pts[k], col = rampColor(p.z);
+      ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + (0.3 + (1 - p.z) * 0.4) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    start();
+  }
+
+  window.addEventListener('resize', function () { build(); }, { passive: true });
+  window.addEventListener('mousemove', function (e) {
+    mouse.tx = e.clientX / window.innerWidth;
+    mouse.ty = e.clientY / Math.max(window.innerHeight, 1);
+  }, { passive: true });
+
+  // pause when hero off-screen to save battery
+  var hero = document.getElementById('hero');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) { e.isIntersecting ? start() : stop(); });
+    }, { threshold: 0.02 }).observe(hero);
+  }
+})();
+
+</script>
 </body>
 </html>
