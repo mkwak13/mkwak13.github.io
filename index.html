@@ -465,6 +465,39 @@
     }
     @media (max-width: 720px) { .t-photo { width: 78%; opacity: 0.1; } .t-item:hover .t-photo { opacity: 0.3; } }
     @media (prefers-reduced-motion: reduce) { .t-photo { transition: none; transform: none; } }
+
+    /* About cards + Selected Work cards: same ghosted photo, revealed on hover */
+    .card { position: relative; overflow: hidden; }
+    .card > h3, .card > p { position: relative; z-index: 1; }
+    .pj > .pj-top, .pj > .pj-desc, .pj > .tags, .pj > .pj-cta { position: relative; z-index: 1; }
+    .gphoto {
+      position: absolute; top: 0; right: 0; height: 100%; width: 58%;
+      object-fit: cover; object-position: center;
+      opacity: 0.1;
+      filter: grayscale(0.75) brightness(0.85) contrast(1.05);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 55%, #000 100%);
+      mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 55%, #000 100%);
+      transform: scale(1.03);
+      transition: opacity 0.5s var(--ease), filter 0.5s var(--ease), transform 0.65s var(--ease);
+      pointer-events: none; z-index: 0;
+    }
+    .card:hover .gphoto, .pj:hover .gphoto {
+      opacity: 0.32; filter: grayscale(0) brightness(1) contrast(1.02); transform: scale(1.07);
+    }
+    @media (max-width: 760px) { .gphoto { width: 80%; opacity: 0.08; } .card:hover .gphoto, .pj:hover .gphoto { opacity: 0.26; } }
+    @media (prefers-reduced-motion: reduce) { .gphoto { transition: none; transform: none; } }
+
+    /* About: one large photo softly behind the whole section (always-on ambient) */
+    #about { position: relative; overflow: hidden; }
+    .about-bg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: center;
+      opacity: 0.08;
+      filter: grayscale(0.6) brightness(0.9) contrast(1.03);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+      pointer-events: none; z-index: 0;
+    }
   </style>
 </head>
 <body>
@@ -521,6 +554,7 @@
 
   <!-- ABOUT -->
   <section id="about" class="ruled">
+    <img class="about-bg" src="about.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
     <div class="wrap">
       <p class="eyebrow mono reveal">Background</p>
       <h2 class="s-title reveal">About</h2>
@@ -636,6 +670,7 @@
       <div class="pj-grid">
 
         <a class="pj feature reveal" href="Spatialmosaic.html">
+          <img class="gphoto" src="sm_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">CVPR 2026 Submission · arXiv:2512.23365</p>
@@ -658,6 +693,7 @@
         </a>
 
         <a class="pj reveal" href="Shades.html">
+          <img class="gphoto" src="spp_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">UCL Final Year Project</p>
@@ -679,6 +715,7 @@
         </a>
 
         <a class="pj reveal" href="Superhero.html">
+          <img class="gphoto" src="super_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
           <div class="pj-top">
             <div>
               <p class="pj-meta mono">NAS · MotionInputGames Partnership</p>
