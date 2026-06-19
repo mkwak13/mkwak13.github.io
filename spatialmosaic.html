@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Minseok Kwak. Computer Vision & Machine Learning researcher. Depth estimation, multi-view geometry, spatial reasoning." />
-  <title>Minseok Kwak · Perception &amp; 3D Vision</title>
+  <meta name="description" content="SpatialMosaic: a large-scale multi-view VLM dataset and benchmark for spatial reasoning under partial visibility, occlusion, and low overlap." />
+  <title>SpatialMosaic · Minseok Kwak</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -444,342 +444,270 @@
 
 </style>
   <style>
-    /* Experience timeline: subtle ghosted background photo per entry, revealed on hover */
-    .t-item { position: relative; overflow: hidden; }
-    .t-item > div { position: relative; z-index: 1; }
-    .t-photo {
-      position: absolute; top: 0; right: 0; height: 100%; width: 54%;
-      object-fit: cover; object-position: center;
-      opacity: 0.12;
-      filter: grayscale(0.75) brightness(0.85) contrast(1.05);
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.4) 55%, #000 100%);
-      mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.4) 55%, #000 100%);
-      transform: scale(1.03);
-      transition: opacity 0.55s var(--ease), filter 0.55s var(--ease), transform 0.7s var(--ease);
-      pointer-events: none; z-index: 0;
+    /* page-specific bits for the SpatialMosaic write-up */
+    .authors-full { color: var(--paper-dim); font-size: 14.5px; line-height: 1.75; margin-top: 1.1rem; }
+    .authors-full .me { color: var(--near); font-weight: 600; }
+    .authors-full sup { color: var(--mute); font-size: 10px; }
+    .affil { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.03em; color: var(--mute); margin-top: 0.5rem; }
+    .fig-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-top: 1.5rem; }
+    .fig-row figure { margin: 0; }
+    .fig-row img { width: 100%; display: block; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    @media (max-width: 640px) { .fig-row { grid-template-columns: 1fr; } }
+    .stat-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.6rem; }
+    .stat { flex: 1 1 130px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--panel), var(--ink-2)); padding: 1rem 1.1rem; }
+    .stat .num { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--paper); letter-spacing: -0.02em; }
+    .stat .num.warm { color: var(--near); }
+    .stat .num.cool { color: var(--far); }
+    .stat .cap { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); margin-top: 0.3rem; }
+    .vidwrap { margin-top: 1.6rem; position: relative; }
+    .vidwrap video { width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #000; }
+    .video-overlay {
+      position: absolute; inset: 0; border: 0; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(ellipse at center, rgba(10,16,20,0.15), rgba(10,16,20,0.62));
+      transition: opacity 0.35s var(--ease), background 0.25s var(--ease);
     }
-    .t-item:hover .t-photo {
-      opacity: 0.4;
-      filter: grayscale(0) brightness(1) contrast(1.02);
-      transform: scale(1.07);
+    .video-overlay:hover { background: radial-gradient(ellipse at center, rgba(10,16,20,0.1), rgba(10,16,20,0.5)); }
+    .video-overlay.hidden { opacity: 0; pointer-events: none; }
+    .play-btn {
+      width: 86px; height: 86px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--near); color: var(--ink);
+      box-shadow: 0 10px 40px rgba(255,125,84,0.35), 0 0 0 0 rgba(255,125,84,0.45);
+      animation: playpulse 2.4s ease-out infinite;
+      transition: transform 0.2s var(--ease), background 0.2s var(--ease);
     }
-    @media (max-width: 720px) { .t-photo { width: 78%; opacity: 0.1; } .t-item:hover .t-photo { opacity: 0.3; } }
-    @media (prefers-reduced-motion: reduce) { .t-photo { transition: none; transform: none; } }
-
-    /* About cards + Selected Work cards: same ghosted photo, revealed on hover */
-    .card { position: relative; overflow: hidden; }
-    .card > h3, .card > p { position: relative; z-index: 1; }
-    .pj > .pj-top, .pj > .pj-desc, .pj > .tags, .pj > .pj-cta { position: relative; z-index: 1; }
-    .gphoto {
-      position: absolute; top: 0; right: 0; height: 100%; width: 58%;
-      object-fit: cover; object-position: center;
-      opacity: 0.1;
-      filter: grayscale(0.75) brightness(0.85) contrast(1.05);
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 55%, #000 100%);
-      mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 55%, #000 100%);
-      transform: scale(1.03);
-      transition: opacity 0.5s var(--ease), filter 0.5s var(--ease), transform 0.65s var(--ease);
-      pointer-events: none; z-index: 0;
+    .video-overlay:hover .play-btn { transform: scale(1.09); background: var(--far); box-shadow: 0 10px 44px rgba(54,198,210,0.4); }
+    .play-btn svg { width: 32px; height: 32px; margin-left: 5px; fill: currentColor; }
+    .play-label { color: var(--paper); letter-spacing: 0.16em; }
+    @keyframes playpulse {
+      0%   { box-shadow: 0 10px 40px rgba(255,125,84,0.35), 0 0 0 0 rgba(255,125,84,0.45); }
+      70%  { box-shadow: 0 10px 40px rgba(255,125,84,0.2), 0 0 0 24px rgba(255,125,84,0); }
+      100% { box-shadow: 0 10px 40px rgba(255,125,84,0.2), 0 0 0 0 rgba(255,125,84,0); }
     }
-    .card:hover .gphoto, .pj:hover .gphoto {
-      opacity: 0.32; filter: grayscale(0) brightness(1) contrast(1.02); transform: scale(1.07);
-    }
-    @media (max-width: 760px) { .gphoto { width: 80%; opacity: 0.08; } .card:hover .gphoto, .pj:hover .gphoto { opacity: 0.26; } }
-    @media (prefers-reduced-motion: reduce) { .gphoto { transition: none; transform: none; } }
-
-    /* About: one large photo softly behind the whole section (always-on ambient) */
-    #about { position: relative; overflow: hidden; }
-    .about-bg {
-      position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; object-position: center;
-      opacity: 0.08;
-      filter: grayscale(0.6) brightness(0.9) contrast(1.03);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
-      mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
-      pointer-events: none; z-index: 0;
-    }
+    @media (prefers-reduced-motion: reduce) { .play-btn { animation: none; } }
+    .bibtex { background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1rem 1.1rem; overflow-x: auto; margin-top: 1rem; }
+    .bibtex pre { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--paper-dim); line-height: 1.7; white-space: pre; margin: 0; }
+  </style>
+  <style>
+    /* zoomable figures + lightbox */
+    .prose figure img { cursor: zoom-in; transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease); }
+    .prose figure img:hover { transform: translateY(-3px) scale(1.012); box-shadow: 0 18px 48px rgba(0,0,0,0.5); }
+    .lightbox { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; padding: 4vmin; background: rgba(6,9,12,0); opacity: 0; pointer-events: none; transition: opacity 0.32s var(--ease), background 0.32s var(--ease); }
+    .lightbox.open { opacity: 1; pointer-events: auto; background: rgba(6,9,12,0.9); }
+    .lightbox img { max-width: 94vw; max-height: 90vh; object-fit: contain; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 90px rgba(0,0,0,0.65); transform: scale(0.9); opacity: 0; transition: transform 0.34s var(--ease), opacity 0.34s var(--ease); cursor: zoom-out; }
+    .lightbox.open img { transform: scale(1); opacity: 1; }
+    .lightbox .lb-close { position: absolute; top: 18px; right: 22px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: #e8eef1; font-size: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s var(--ease), border-color 0.2s var(--ease); }
+    .lightbox .lb-close:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.4); }
+    @media (prefers-reduced-motion: reduce) { .prose figure img:hover, .lightbox img { transform: none; } }
   </style>
 </head>
+
 <body>
 
-<!-- STATUS BAR -->
 <header class="statusbar">
-  <a class="brand" href="#hero" aria-label="Minseok Kwak, home">
+  <a class="brand" href="index.html" aria-label="Minseok Kwak, home">
     <span class="dot" aria-hidden="true"></span> Minseok&nbsp;Kwak
   </a>
   <span class="mono status-meta">PERCEPTION&nbsp;/&nbsp;3D&nbsp;VISION · LONDON 51.50°N</span>
   <nav>
     <ul class="nav-links">
-      <li><a href="#about">About</a></li>
-      <li><a href="#experience">Experience</a></li>
-      <li><a href="#projects">Work</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#projects">Work</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
     </ul>
   </nav>
 </header>
 
-<main>
+<main class="doc-main">
+  <div class="doc-wrap">
 
-  <!-- HERO -->
-  <section id="hero">
-    <canvas id="depthfield" aria-hidden="true"></canvas>
-    <div class="viewport-frame" aria-hidden="true">
-      <span class="vtick tl"></span><span class="vtick tr"></span>
-      <span class="vtick bl"></span><span class="vtick br"></span>
-    </div>
-    <div class="wrap">
-      <p class="hero-eyebrow mono h-anim d1">
-        <span>BSc Computer Science · UCL</span>
-        <span><b>●</b> Open to research &amp; internships</span>
+    <a class="backlink" href="index.html#projects"><span class="ar">←</span> Back to work</a>
+
+    <header class="doc-head">
+      <p class="doc-eyebrow mono">CVPR 2026 Submission · arXiv:2512.23365</p>
+      <h1 class="doc-title">SpatialMosaic: A Multi-view VLM Dataset for Partial Visibility</h1>
+      <p class="doc-sub">
+        A large-scale multi-view benchmark across indoor and outdoor scenes, built to evaluate
+        spatial reasoning under partial visibility, occlusion, and low-overlap conditions, from
+        fragmented visual observations.
       </p>
-      <h1 class="hero-name h-anim d2">Minseok<br><span class="accent">Kwak</span></h1>
-      <p class="hero-sub h-anim d3">Teaching machines to perceive <span class="swap">depth</span>, space, and structure.</p>
-      <p class="hero-bio h-anim d4">
-        Computer vision and machine learning researcher specializing in depth estimation,
-        multi-view geometry, and multimodal spatial reasoning. I build research-driven
-        perception systems and push them onto hard real-world problems, from surgical
-        endoscopy to occlusion-heavy 3D scenes.
+      <p class="authors-full">
+        Kanghee Lee<sup>1</sup>, Injae Lee<sup>1</sup>, <span class="me">Minseok Kwak<sup>2</sup></span>,
+        Jungi Hong<sup>1</sup>, Sion Lee<sup>3</sup>, Kwonyoung Ryu<sup>4</sup>, Jaesik Park<sup>1</sup>
       </p>
-      <div class="hero-actions h-anim d4">
-        <a class="btn btn-primary" href="#projects">View work <span class="arr" aria-hidden="true">↗</span></a>
-        <a class="btn btn-ghost" href="https://github.com/mkwak13" target="_blank" rel="noopener">GitHub</a>
-        <a class="btn btn-ghost" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">LinkedIn</a>
+      <p class="affil"><sup>1</sup> Seoul National University · <sup>2</sup> University College London · <sup>3</sup> Kyung Hee University · <sup>4</sup> POSTECH</p>
+      <div class="doc-actions">
+        <a class="btn btn-primary" href="https://arxiv.org/abs/2512.23365" target="_blank" rel="noopener">arXiv Paper <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-ghost" href="https://arxiv.org/pdf/2512.23365" target="_blank" rel="noopener">PDF <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-ghost" href="https://kanghee-lee.github.io/spatialmosaic/" target="_blank" rel="noopener">Project Page <span aria-hidden="true">↗</span></a>
       </div>
-      <div class="ramp h-anim d5" aria-hidden="true">
-        <div class="ramp-bar"></div>
-        <div class="ramp-labels mono"><span><b>NEAR</b> 0.0</span><span>DEPTH</span><span><b>FAR</b> ∞</span></div>
-      </div>
-    </div>
-  </section>
+    </header>
 
-  <!-- ABOUT -->
-  <section id="about" class="ruled">
-    <img class="about-bg" src="about.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-    <div class="wrap">
-      <p class="eyebrow mono reveal">Background</p>
-      <h2 class="s-title reveal">About</h2>
-      <p class="s-desc reveal">What I work on, and how I work.</p>
-      <div class="about-grid">
-        <div class="card reveal">
-          <h3><span class="k">01</span> Who I am</h3>
+    <div class="doc-body">
+      <div class="prose">
+
+        <div class="vidwrap">
+          <video controls playsinline preload="metadata"
+                 poster="https://kanghee-lee.github.io/spatialmosaic/static/images/Teaser_final_eccv_2.jpg">
+            <source src="https://kanghee-lee.github.io/spatialmosaic/static/videos/teaser_demo.mp4" type="video/mp4" />
+          </video>
+          <button class="video-overlay" type="button" aria-label="Play teaser video">
+            <span class="play-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+            <span class="play-label mono">Play with sound</span>
+          </button>
+        </div>
+
+        <div class="abstract">
+          <span class="lab mono">Overview</span>
           <p>
-            South Korean Computer Science graduate from UCL. I was drawn to engineering for
-            its demand for deliberate reasoning toward a clear objective. Across my degree I
-            worked widely through ML and AI, full-stack development, academic research, game
-            development, web systems, finance, and medical imaging.
+            Multimodal LLMs are improving fast at 3D scene understanding, and a recent line of work
+            learns spatial reasoning directly from multi-view images, without explicit 3D
+            reconstruction. The cases that dominate real environments, however, stay under-explored:
+            an object may appear in only some of the views, sit behind another object, or the views
+            may barely overlap. SpatialMosaic targets exactly these conditions. A scalable multi-view
+            data-generation and annotation pipeline turns multi-view images and 3D point clouds into
+            geometrically grounded spatial-reasoning QA, producing a 2M-pair instruction-tuning
+            dataset and SpatialMosaic-Bench, a 1M-pair benchmark spanning six tasks across both indoor
+            and outdoor scenes. We also introduce SpatialMosaicVLM, a hybrid baseline that integrates a
+            3D reconstruction model as a geometry encoder inside a VLM for more robust spatial reasoning.
           </p>
         </div>
-        <div class="card reveal">
-          <h3><span class="k">02</span> How I work</h3>
-          <p>
-            I have worked in formally contracted client settings, high-pressure military
-            environments, and research collaborations with domain experts at the frontier of
-            their fields. I value structured planning, clear communication, and processes that
-            let teams move efficiently and sustainably. Outcomes matter, but sound process
-            matters more.
-          </p>
-        </div>
-      </div>
-      <div class="facts reveal" aria-hidden="false">
-        <span class="fact"><i></i>Computer Vision</span>
-        <span class="fact"><i></i>3D Reconstruction</span>
-        <span class="fact warm"><i></i>Depth Estimation</span>
-        <span class="fact"><i></i>Multimodal / VLM</span>
-        <span class="fact warm"><i></i>Medical Imaging</span>
-        <span class="fact"><i></i>Spatial Reasoning</span>
-      </div>
-    </div>
-  </section>
 
-  <!-- EXPERIENCE -->
-  <section id="experience" class="ruled">
-    <div class="wrap">
-      <p class="eyebrow mono reveal">Career</p>
-      <h2 class="s-title reveal">Experience</h2>
-      <p class="s-desc reveal">A chronological record of the work that shaped how I build.</p>
-      <div class="timeline">
-
-        <div class="t-item reveal">
-          <img class="t-photo" src="exp_snu.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="t-when mono"><span class="yr">2024</span>Present</div>
-          <div>
-            <p class="t-org mono">Seoul National University · VGI Lab</p>
-            <p class="t-role">Machine Learning Research Intern</p>
-            <p class="t-body">
-              Long-term ML intern implementing state-of-the-art models across computer vision,
-              image processing, geometric perception, and 3D reconstruction. Submitted a paper
-              to CVPR 2026 as second author, introducing a multimodal pipeline for spatial
-              reasoning under heavy object occlusion.
-            </p>
-            <div class="tags">
-              <span class="tag">Machine Learning</span><span class="tag">Computer Vision</span>
-              <span class="tag">3D Reconstruction</span><span class="tag">LLM</span>
-              <span class="tag">Multimodal</span><span class="tag">Depth Perception</span>
-            </div>
-          </div>
+        <div class="stat-row">
+          <div class="stat"><div class="num warm">2M</div><div class="cap">Training QA pairs</div></div>
+          <div class="stat"><div class="num cool">1M</div><div class="cap">Benchmark QA pairs</div></div>
+          <div class="stat"><div class="num">6</div><div class="cap">Benchmark tasks</div></div>
+          <div class="stat"><div class="num">2</div><div class="cap">Indoor + outdoor domains</div></div>
         </div>
 
-        <div class="t-item reveal">
-          <img class="t-photo" src="exp_ucl.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="t-when mono"><span class="yr">2023</span></div>
-          <div>
-            <p class="t-org mono">UCL · NAS Partnership</p>
-            <p class="t-role">Lead Developer, Game Development</p>
-            <p class="t-body">
-              Lead developer on a team of engineers under official partnership with the National
-              Autistic Society and MotionInputGames. Delivered a Unity-based therapeutic game
-              that helps autistic children develop motor skills through motion-capture integration.
-            </p>
-            <div class="tags">
-              <span class="tag">3D Unity</span><span class="tag">C#</span>
-              <span class="tag">GPU Optimization</span><span class="tag">Motion Capture</span>
-              <span class="tag">Rigidbody Physics</span>
-            </div>
-          </div>
+        <h2><span class="n">01</span> The problem</h2>
+        <p>
+          Existing multi-view benchmarks largely assume fully visible scenes or sequential inputs,
+          so they do not reflect realistic conditions where observations are sparse and incomplete.
+          In practice, a model has to reason from fragmented visual cues spread across viewpoints.
+          Humans integrate those incomplete observations into a coherent 3D picture; current MLLMs
+          often fail under the same conditions. SpatialMosaic isolates three under-explored
+          constraints that frequently arise in multi-view settings:
+        </p>
+        <ul>
+          <li><strong>Partial visibility</strong>: an object is visible only in a subset of the views.</li>
+          <li><strong>Occlusion</strong>: an object is partially occluded within a single view.</li>
+          <li><strong>Low overlap</strong>: the views share minimal cross-view overlap.</li>
+        </ul>
+
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/Teaser_final_eccv_2.jpg" alt="SpatialMosaic teaser and method overview" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 1 · Reasoning over partially visible, occluded, low-overlap multi-view observations.</figcaption>
+        </figure>
+
+        <h2><span class="n">02</span> Data generation pipeline</h2>
+        <p>
+          SpatialMosaic is built with a scalable multi-view pipeline. Given multi-view images and 3D
+          point clouds, it computes occlusion-aware spatial annotations and samples sparse viewpoints
+          to force reasoning from fragmented observations. Object instances are filtered by visibility
+          constraints, 3D spatial relations are derived from geometric cues, and task-specific
+          templates generate diverse, geometrically grounded QA pairs, yielding 2M training pairs plus
+          1M evaluation pairs in SpatialMosaic-Bench across indoor and outdoor environments.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/data_generation_pipeline_v7.jpg" alt="SpatialMosaic data generation pipeline" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 2 · Construction pipeline: occlusion-aware annotation, sparse-view sampling, visibility filtering, and templated QA generation.</figcaption>
+        </figure>
+
+        <h3>Measuring occlusion</h3>
+        <p>
+          To quantify occlusion under realistic multi-view conditions, the pipeline introduces an
+          occlusion ratio that captures both inter-object obstruction and field-of-view truncation.
+          Per-instance and full-scene depth maps are rendered from the multi-view images and compared
+          to decide whether each point is visible or occluded. From this it computes an
+          <strong>object occlusion ratio</strong> (the share of points occluded by other objects) and
+          a <strong>field-of-view occlusion ratio</strong> (truncation at image boundaries), giving a
+          unified, fine-grained handle on visibility during data generation.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/Occlusion_score_v13.jpg" alt="Occlusion score computation" loading="lazy" />
+          <figcaption class="fig-cap">FIG. 3 · Object and field-of-view occlusion ratios from rendered depth comparisons.</figcaption>
+        </figure>
+
+        <h2><span class="n">03</span> SpatialMosaic-Bench</h2>
+        <p>
+          SpatialMosaic-Bench holds 1M QA pairs across six task categories, weighted toward medium-
+          and high-difficulty samples to stress multi-view spatial reasoning. The benchmark is
+          characterized along three axes: occlusion level, overlap level, and visibility level.
+        </p>
+        <div class="fig-row">
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_occlusion_v1.jpg" alt="Occlusion level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Occlusion level</figcaption>
+          </figure>
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_overlap_v1.jpg" alt="Overlap level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Overlap level</figcaption>
+          </figure>
+          <figure>
+            <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/supple_visibility_v1.jpg" alt="Visibility level distribution" loading="lazy" />
+            <figcaption class="fig-cap">Visibility level</figcaption>
+          </figure>
         </div>
 
-        <div class="t-item reveal">
-          <img class="t-photo" src="exp_army.jpg" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="t-when mono"><span class="yr">2020–22</span></div>
-          <div>
-            <p class="t-org mono">Republic of Korea Army</p>
-            <p class="t-role">Network Communications Specialist</p>
-            <p class="t-body">
-              Served 18 months in the Capital Mechanized Infantry Tiger Division, Information
-              Communications Battalion. Held the squad-leader role for over half of service,
-              allocating tasks, ensuring effective team collaboration, and maintaining flawless
-              performance under physically and mentally demanding conditions.
-            </p>
-            <div class="tags">
-              <span class="tag">Leadership</span><span class="tag">Data Network</span>
-              <span class="tag">Security</span><span class="tag">Communications</span>
-            </div>
-          </div>
+        <h2><span class="n">04</span> Data samples</h2>
+        <p>
+          Tasks span counting, best-view selection, localization, and relative-position reasoning.
+          Indoor scenes are built from ScanNet++; outdoor scenes from Waymo.
+        </p>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/indoor/proj_page_count.jpg" alt="Indoor multi-view counting QA example" loading="lazy" />
+          <figcaption class="fig-cap">INDOOR (ScanNet++) · "How many plant pots are visible across these frames?"</figcaption>
+        </figure>
+        <figure class="figure">
+          <img src="https://kanghee-lee.github.io/spatialmosaic/static/images/outdoor/proj_page_out_count.jpg" alt="Outdoor multi-view counting QA example" loading="lazy" />
+          <figcaption class="fig-cap">OUTDOOR (Waymo) · "How many vehicles are visible across these frames?"</figcaption>
+        </figure>
+
+        <h2><span class="n">05</span> SpatialMosaicVLM</h2>
+        <p>
+          Alongside the dataset, we introduce SpatialMosaicVLM, a new baseline for the multi-view
+          setting. It is a hybrid framework that integrates a 3D reconstruction model as a geometry
+          encoder within the VLM, giving the language model explicit geometric grounding for more
+          robust spatial reasoning. Across extensive experiments, training on SpatialMosaic measurably
+          improves spatial reasoning under challenging multi-view conditions, validating the data
+          pipeline's ability to produce realistic, geometrically grounded QA.
+        </p>
+
+        <h2><span class="n">06</span> Citation</h2>
+        <div class="bibtex">
+<pre>@article{lee2025spatialmosaic,
+  title   = {SpatialMosaic: A Multiview VLM Dataset for Partial Visibility},
+  author  = {Lee, Kanghee and Lee, Injae and Kwak, Minseok and
+             Ryu, Kwonyoung and Hong, Jungi and Park, Jaesik},
+  journal = {arXiv preprint arXiv:2512.23365},
+  year    = {2025}
+}</pre>
         </div>
 
-      </div>
-    </div>
-  </section>
-
-  <!-- PROJECTS -->
-  <section id="projects" class="ruled">
-    <div class="wrap">
-      <p class="eyebrow mono reveal">Research &amp; Development</p>
-      <h2 class="s-title reveal">Selected Work</h2>
-      <p class="s-desc reveal">From conference submissions to personal projects.</p>
-      <div class="pj-grid">
-
-        <a class="pj feature reveal" href="Spatialmosaic.html">
-          <img class="gphoto" src="sm_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="pj-top">
-            <div>
-              <p class="pj-meta mono">CVPR 2026 Submission · arXiv:2512.23365</p>
-              <p class="pj-title">SpatialMosaic: A Multi-view VLM Dataset for Partial Visibility</p>
-            </div>
-            <span class="pj-arr" aria-hidden="true">→</span>
-          </div>
-          <p class="pj-desc">
-            Multimodal 3D VLM pipeline that learns spatial relations across multi-view scenarios,
-            targeting frames with object occlusion and partial visibility without explicit 3D
-            reconstruction. Integrates the VGGT foundation model and ranks among state-of-the-art
-            on VSI-Bench.
-          </p>
+        <div class="kw">
+          <span class="lab mono">Keywords</span>
           <div class="tags">
-            <span class="tag">3D VLM</span><span class="tag">Multimodal</span>
-            <span class="tag">Spatial Reasoning</span><span class="tag">VQA</span>
-            <span class="tag">Foundation Model</span><span class="tag">CVPR</span>
+            <span class="tag">Multi-view Spatial Reasoning</span><span class="tag">Vision-Language Models</span>
+            <span class="tag">Partial Visibility</span><span class="tag">Occlusion</span>
+            <span class="tag">Low Overlap</span><span class="tag">Instruction Tuning</span>
+            <span class="tag">VQA</span><span class="tag">2M Dataset</span><span class="tag">Benchmark</span>
           </div>
-          <span class="pj-cta mono">Read abstract →</span>
-        </a>
-
-        <a class="pj reveal" href="Shades.html">
-          <img class="gphoto" src="spp_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="pj-top">
-            <div>
-              <p class="pj-meta mono">UCL Final Year Project</p>
-              <p class="pj-title">SHADeS++: Specular-Aware Monocular Depth for Endoscopy</p>
-            </div>
-            <span class="pj-arr" aria-hidden="true">→</span>
-          </div>
-          <p class="pj-desc">
-            An upgraded monocular depth-estimation model for endoscopy that explicitly models and
-            suppresses diffuse and specular reflections while enforcing temporal consistency across
-            frames, lifting depth-prediction quality on reflective surgical scenes.
-          </p>
-          <div class="tags">
-            <span class="tag">Endoscopy</span><span class="tag">Depth Estimation</span>
-            <span class="tag">Medical Imaging</span><span class="tag">Specular Artifacts</span>
-            <span class="tag">Temporal Consistency</span>
-          </div>
-          <span class="pj-cta mono">Read abstract →</span>
-        </a>
-
-        <a class="pj reveal" href="Superhero.html">
-          <img class="gphoto" src="super_bg.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" />
-          <div class="pj-top">
-            <div>
-              <p class="pj-meta mono">NAS · MotionInputGames Partnership</p>
-              <p class="pj-title">SuperHero SportsDay: Real-time Motion-Capture Sports Game</p>
-            </div>
-            <span class="pj-arr" aria-hidden="true">→</span>
-          </div>
-          <p class="pj-desc">
-            3D Unity therapeutic game built under official partnership with the National Autistic
-            Society, designed to improve motor skills in autistic children during middle childhood
-            through motion-capture integration and game-based therapy.
-          </p>
-          <div class="tags">
-            <span class="tag">3D Unity</span><span class="tag">C#</span>
-            <span class="tag">Motion Capture</span><span class="tag">GPU Optimization</span>
-            <span class="tag">User Experience</span>
-          </div>
-          <span class="pj-cta mono">View project →</span>
-        </a>
+        </div>
 
       </div>
-    </div>
-  </section>
 
-  <!-- CONTACT -->
-  <section id="contact" class="ruled">
-    <div class="wrap">
-      <p class="eyebrow mono reveal">Get in touch</p>
-      <h2 class="s-title reveal">Contact</h2>
-      <p class="s-desc reveal">Open to research collaborations, internship opportunities, and interesting problems.</p>
-      <div class="contact-grid">
-
-        <a class="ct reveal" href="mailto:minseok.kwak1438@gmail.com">
-          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
-          <span><span class="ct-lab mono">Email</span><br><span class="ct-val">minseok.kwak1438@gmail.com</span></span>
-        </a>
-
-        <a class="ct reveal" href="https://github.com/mkwak13" target="_blank" rel="noopener">
-          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></span>
-          <span><span class="ct-lab mono">GitHub</span><br><span class="ct-val">github.com/mkwak13</span></span>
-        </a>
-
-        <a class="ct reveal" href="https://www.linkedin.com/in/minseok-kwak/" target="_blank" rel="noopener">
-          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg></span>
-          <span><span class="ct-lab mono">LinkedIn</span><br><span class="ct-val">linkedin.com/in/minseok-kwak</span></span>
-        </a>
-
-        <a class="ct reveal" href="tel:+447707756836">
-          <span class="ct-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.92z"/></svg></span>
-          <span><span class="ct-lab mono">Phone (UK)</span><br><span class="ct-val">+44 7707 756836</span></span>
-        </a>
-
+      <div class="doc-foot">
+        <a class="backlink" href="index.html#projects" style="margin:0"><span class="ar">←</span> Back to work</a>
+        <span class="mono" style="color:var(--faint)">arXiv:2512.23365</span>
       </div>
     </div>
-  </section>
 
-</main>
-
-<footer>
-  <div class="wrap foot-row">
-    <span class="mono">© 2025 MINSEOK KWAK</span>
-    <span class="mono"><b>STATUS:</b> SYSTEM NOMINAL · LONDON</span>
   </div>
-</footer>
+</main>
 
 <script>
 (function () {
@@ -931,6 +859,42 @@
 })();
 
 </script>
+<script>
+(function () {
+  var v = document.querySelector('.vidwrap video');
+  var overlay = document.querySelector('.video-overlay');
+  if (!v || !overlay) return;
+  function startWithSound() {
+    v.muted = false;
+    v.volume = 1.0;            // 1.0 is the element's maximum
+    var pr = v.play();
+    if (pr && pr.catch) pr.catch(function () {});
+    overlay.classList.add('hidden');
+  }
+  overlay.addEventListener('click', startWithSound);
+  // if playback starts via the native controls, hide the overlay too
+  v.addEventListener('play', function () { overlay.classList.add('hidden'); });
+})();
+</script>
 
+  <script>
+  (function(){
+    var imgs = document.querySelectorAll('.prose figure img');
+    if (!imgs.length) return;
+    var lb = document.createElement('div');
+    lb.className = 'lightbox'; lb.setAttribute('role','dialog'); lb.setAttribute('aria-modal','true'); lb.setAttribute('aria-hidden','true');
+    lb.innerHTML = '<button class="lb-close" aria-label="Close image">\u00D7</button><img alt="" />';
+    document.body.appendChild(lb);
+    var lbImg = lb.querySelector('img'), btn = lb.querySelector('.lb-close');
+    function openLB(src, alt){ lbImg.src = src; lbImg.alt = alt || ''; lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); document.documentElement.style.overflow = 'hidden'; }
+    function closeLB(){ lb.classList.remove('open'); lb.setAttribute('aria-hidden','true'); document.documentElement.style.overflow = ''; setTimeout(function(){ if(!lb.classList.contains('open')) lbImg.removeAttribute('src'); }, 360); }
+    imgs.forEach(function(img){
+      img.addEventListener('click', function(){ if (this.offsetParent === null) return; openLB(this.currentSrc || this.src, this.alt); });
+    });
+    lb.addEventListener('click', function(e){ if (e.target === lb || e.target === lbImg || e.target === btn) closeLB(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && lb.classList.contains('open')) closeLB(); });
+  })();
+  </script>
 </body>
+
 </html>
