@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SEAMLESS · Minseok Kwak</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta name="description" content="SEAMLESS: specularity-aware, end-to-end self-supervised monocular depth and pose estimation for GI endoscopy with a learned soft specular mask." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']] }, options: { renderActions: { addMenu: [] } } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Minseok Kwak, home"><span class="mark" aria-hidden="true"></span>Minseok Kwak</a>
+    <nav class="nav-wrap" aria-label="Primary"><ul class="nav-links">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#projects">Work</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul></nav>
+    <a class="btn btn-primary btn-sm" href="mailto:minseok.kwak1438@gmail.com">Email me</a>
+    <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</header>
+
+<main id="main">
+  <header class="doc-hero">
+    <div class="wrap">
+      <a class="back" href="index.html#projects"><span class="ar" aria-hidden="true">←</span> Back to work</a>
+      <div><span class="status status-review">IPCAI submission · first-author paper</span></div>
+      <h1>SEAMLESS: Specularity-Aware End-to-End Adaptive Masking and Luminance Estimation via Self-Supervision</h1>
+      <p class="sub">A fully self-supervised, end-to-end illumination decomposition that <strong>learns to detect and separate specular reflections</strong>, for robust monocular depth and pose estimation in gastrointestinal endoscopy.</p>
+      <p class="authors"><b>Minseok Kwak</b> · Francisco Vasconcelos</p>
+      <p class="affil">UCL Medical Physics &amp; Biomedical Engineering · UCL Hawkes Institute &amp; Department of Computer Science</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="seamless.pdf" target="_blank" rel="noopener">Read paper (PDF) <span class="ar up" aria-hidden="true">↗</span></a>
+        <a class="btn btn-secondary" href="shades.html">SHADeS++ (FYP) <span class="ar" aria-hidden="true">→</span></a>
+        <a class="btn btn-secondary" href="https://arxiv.org/abs/2502.12994" target="_blank" rel="noopener">Original SHADeS paper <span class="ar up" aria-hidden="true">↗</span></a>
+      </div>
+      <div class="stats">
+        <div class="stat"><b class="acc">−16%</b><span>AbsRel vs SHADeS on C3VD</span></div>
+        <div class="stat"><b class="acc">−19%</b><span>AbsRel vs SHADeS on C3VDv2</span></div>
+        <div class="stat"><b>0</b><span>Specular annotations needed</span></div>
+        <div class="stat"><b>3</b><span>Zero-shot evaluation datasets</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="doc-sec">
+    <div class="wrap split">
+      <div class="prose">
+        <div class="abstract">
+          <span class="lab">Abstract</span>
+          <p>In gastrointestinal endoscopy, 3D information about camera motion and the GI tract surface provides navigation cues to verify inspection completeness and revisit previous locations. Accurate 3D understanding is hard here because a moving light source and specular reflections create irregular illumination. SEAMLESS, like previous approaches in this domain, decomposes scene illumination from tissue albedo while estimating camera motion and depth. It improves on the previous state of the art (SHADeS) with a fully self-supervised, end-to-end illumination decomposition that decouples luminance, specularities, and albedo, removing the reliance on handcrafted specularity detectors. To our knowledge, it is the <strong>first monocular depth model in this domain that explicitly learns to detect and separate specular reflections</strong> through light decomposition. SEAMLESS outperforms SHADeS and older baselines on every depth metric on C3VD, widens the margin on the more realistic C3VDv2, and produces visibly cleaner depth on real EndoMapper colonoscopies.</p>
+        </div>
+        <h2 style="margin-top:40px">The problem</h2>
+        <p>Estimating the camera trajectory and reconstructing the GI tract can support assisted navigation, helping clinicians verify inspection completeness and relocalize previously detected landmarks. Most monocular 3D methods, however, assume well-lit scenes and Lambertian reflectance. Endoscopy breaks both assumptions:</p>
+        <ul>
+          <li>A moving, directional light source attached to the camera.</li>
+          <li>Abundant view-dependent specular highlights from wet tissue.</li>
+          <li>Self-supervised photometric losses that read these highlights as geometry.</li>
+        </ul>
+        <p>SHADeS partly addresses this by decomposing each frame into specular reflections, diffuse albedo, and luminance, and training depth and pose on the albedo. Its specular handling, though, lives outside the network: a non-learned intensity detector and a pretrained inpainting model produce the specular-free image before training, so detection errors stay fixed for the whole run and the network never builds its own representation of specularity. <strong>SEAMLESS moves specular processing into the network</strong> and learns it jointly with albedo, luminance, depth, and pose.</p>
+      </div>
+      <div class="sticky">
+        <div class="viewer" data-explorer>
+          <div class="viewer-bar"><span class="live">Decomposition explorer · one frame</span><span>← →</span></div>
+          <div class="seg" role="tablist" aria-label="SEAMLESS decomposition outputs">
+            <button role="tab" data-layer="input" aria-selected="true" data-text="<b>Input I<sub>t</sub>.</b> A real endoscopy frame with specular highlights scattered over wet mucosa.">Input</button>
+            <button role="tab" data-layer="albedo" aria-selected="false" data-text="<b>Albedo A.</b> View-independent tissue color, with the illumination factored out.">Albedo</button>
+            <button role="tab" data-layer="shading" aria-selected="false" data-text="<b>Shading L.</b> The single-channel illumination field from the moving light source.">Shading</button>
+            <button role="tab" data-layer="mask" aria-selected="false" data-text="<b>Soft specular mask M.</b> Predicted by the decomposition network, learned end to end.">Mask</button>
+            <button role="tab" data-layer="pseudo" aria-selected="false" data-text="<b>Pseudo-label M̂.</b> Annotation-free brightness-contrast target, used only during training.">Pseudo-label</button>
+            <button role="tab" data-layer="filtered" aria-selected="false" data-text="<b>Specular removed I<sub>filt</sub>.</b> Highlights filled from valid neighbors before depth encoding.">Specular removed</button>
+            <button role="tab" data-layer="depth" aria-selected="false" data-text="<b>Depth D<sub>t</sub>.</b> Hover over the frame to probe relative depth (bright near, dark far).">Depth</button>
+          </div>
+          <div class="stage" data-probe="img/seamless/depth.jpg" data-probe-layer="depth">
+            <div class="layers">
+              <img width="640" height="640" data-name="input" class="on" src="img/seamless/input.jpg" alt="Endoscopy input frame" />
+              <img width="640" height="640" data-name="albedo" src="img/seamless/albedo.jpg" alt="Albedo predicted by SEAMLESS" loading="lazy" />
+              <img width="640" height="640" data-name="shading" src="img/seamless/shading.jpg" alt="Shading predicted by SEAMLESS" loading="lazy" />
+              <img width="640" height="640" data-name="mask" src="img/seamless/mask.jpg" alt="Soft specular mask predicted by SEAMLESS" loading="lazy" />
+              <img width="640" height="640" data-name="pseudo" src="img/seamless/pseudo.jpg" alt="Specular pseudo-label" loading="lazy" />
+              <img width="640" height="640" data-name="filtered" src="img/seamless/filtered.jpg" alt="Specular-removed image" loading="lazy" />
+              <img width="640" height="640" data-name="depth" src="img/seamless/depth.jpg" alt="Depth predicted by SEAMLESS" loading="lazy" />
+            </div>
+          </div>
+          <p class="explain" data-explain></p>
+          <div class="viewer-foot"><span class="readout" data-readout>Select a layer</span><span>Fig. 1 tiles</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="doc-sec alt">
+    <div class="narrow prose">
+      <h2>Method</h2>
+      <figure class="figure" style="margin-top:8px">
+        <img width="1608" height="864" src="seamless_overview.jpg" alt="SEAMLESS overview: decomposition into albedo, shading and soft specular mask, specular suppression, 7-channel depth input, and specular-gated training" loading="lazy" />
+        <figcaption class="figcap">FIG. 1 · Overview of SEAMLESS. \(\phi_\text{Decompose}\) predicts albedo \(A\), shading \(L\) and a soft specular mask \(M\), supervised during training by the pseudo-label \(\hat{M}\). \(M\) suppresses highlights in the image and albedo, which are concatenated with \(M\) as the input of \(\phi_\text{Depth}\), and gates the photometric loss in both views.</figcaption>
+      </figure>
+
+      <h3>1. Decomposition with a learned specular mask</h3>
+      <p>Following SHADeS, the image is modeled as a diffuse term plus a specular term. Rather than estimating the specular term directly, \(\phi_\text{Decompose}\) predicts a three-channel albedo \(A\), a single-channel shading \(L\), and a soft mask \(M\in[0,1]^{H\times W}\): the per-pixel probability that a pixel is specular.</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 1">$$ I \approx A\odot L + S, \qquad A_\text{diff} = A\odot(1 - M) + M\odot\bar{A} $$</div>
+      <p>The mask head is sigmoid-activated with its bias initialized to \(-2.0\), so \(M\) starts near \(\sigma(-2)\approx 0.12\), a mostly non-specular prior. Residual highlights in the albedo are replaced by \(\bar{A}\), the \(7\times7\) average over non-specular neighbors, and all reconstructions use the diffuse term only.</p>
+
+      <h3>2. Annotation-free specular pseudo-labels</h3>
+      <p>No pixel-level specular labels exist, so \(M\) is anchored by a pseudo-label \(\hat{M}\) computed from the raw frame at every iteration. Highlights appear as sharp brightness peaks over smooth diffuse illumination, so the positive residual of brightness over a \(9\times9\) average is thresholded at its per-image 97th percentile inside the field of view \(\Omega\):</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 2">$$ C = \max\!\big(B - \text{AvgPool}_{9\times9}(B),\, 0\big), \qquad \hat{M}_\text{core}(p) = \mathbb{1}\!\left[C(p) > \tau_{0.97}\right]\mathbb{1}\!\left[p\in\Omega\right] $$</div>
+      <p>\(\Omega\) excludes the high-contrast vignette boundary, and pixels fully enclosed by the core are flood-filled so large saturated highlights are covered without spreading beyond them. Crucially, <strong>\(\hat{M}\) only enters through a weighted BCE term</strong>. \(M\) is also shaped by the photometric and decomposition losses, so it can diverge from the pseudo-label whenever those objectives disagree.</p>
+
+      <h3>3. Specular-suppressed depth input</h3>
+      <p>Highlights are unrelated to geometry yet locally dominant, so a depth encoder fed the raw image can learn spurious brightness-to-depth shortcuts. SEAMLESS fills specular pixels in both the image and the albedo from valid non-specular neighbors, rescaling the albedo fill to the local image luma with \(\gamma\):</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 3">$$ I_\text{filt} = I\odot(1 - M) + \gamma\,\bar{A}\odot M, \qquad A_\text{filt} = A_\text{diff}\odot(1 - M) + \bar{A}\odot M $$</div>
+      <p>Large highlights without valid neighbors are filled by iterative propagation. The depth encoder then receives a seven-channel input: a specular-suppressed image, a view-independent surface color, and an explicit map of which pixels are unreliable.</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 4">$$ x_\text{depth} = [\,I_\text{filt},\; A_\text{filt},\; M\,] \in \mathbb{R}^{7\times H\times W} $$</div>
+
+      <h3>4. Specular-aware view synthesis</h3>
+      <p>Each source frame's albedo, shading, and mask are warped into the target view, and the reconstruction is their diffuse product \(\hat{I}_{s\to t} = A_{s\to t}\odot L_{s\to t}\). Instead of inpainting the target, highlights are excluded from the loss: <strong>a pixel only supervises depth if it is non-specular in both views</strong>, so a moving highlight vanishes from each.</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 5">$$ \mu = \mu_1\odot\mu_2\odot(1 - M_t)\odot(1 - M_{s\to t}) $$</div>
+
+      <h3>5. Training objective</h3>
+      <p>Every term is evaluated at the finest scale. The decomposition loss uses only \(\ell_1\) against the raw image, since SSIM can be satisfied by splitting texture arbitrarily between albedo and shading. Where the photometric signal is gated out, depth smoothness is raised in proportion to the mask, \(1 + \beta\,\text{sg}(M_t)\) with \(\beta = 0.3\).</p>
+      <div class="eq" tabindex="0" role="region" aria-label="Equation 6">$$ \mathcal{L} = \lambda_r\,\mu\odot\mathcal{L}_r + \lambda_d\mathcal{L}_d + \lambda_{es}\mathcal{L}_{es} + \lambda_m\mathcal{L}_\text{mask} + \lambda_{tv}\mathcal{L}_{tv} + \lambda_\rho\mathcal{L}_\text{ratio} + \lambda_\text{light}\mathcal{L}_\text{light} $$</div>
+      <div class="lw">
+        <div><div class="k">λr</div><div class="v">1.0</div><div class="d">Reprojection</div></div>
+        <div><div class="k">λd</div><div class="v">0.3</div><div class="d">Decomp. recon.</div></div>
+        <div><div class="k">λes</div><div class="v">0.01</div><div class="d">Edge-aware smooth</div></div>
+        <div><div class="k">λm</div><div class="v">0.4</div><div class="d">Mask BCE</div></div>
+        <div><div class="k">λtv</div><div class="v">0.005</div><div class="d">Mask TV</div></div>
+        <div><div class="k">λρ</div><div class="v">0.02</div><div class="d">Mask coverage</div></div>
+        <div><div class="k">λlight</div><div class="v">0.05</div><div class="d">Shading smooth</div></div>
+        <div><div class="k">β</div><div class="v">0.3</div><div class="d">Specular smooth</div></div>
+        <div><div class="k">ρ</div><div class="v">0.15</div><div class="d">Coverage target</div></div>
+      </div>
+      <p class="tcap">Trained only on real colonoscopy video (Hyper-Kvasir split of SHADeS: 16,976 training frames) for 20 epochs with Adam, lr \(5\times10^{-5}\) decayed ×0.1 at epoch 10, batch 8, inputs 288×288, frame offsets \(\{0,-1,+1\}\). C3VD, C3VDv2 and EndoMapper are never used for training, so all results are zero-shot.</p>
+    </div>
+  </section>
+
+  <section class="doc-sec" id="results">
+    <div class="wrap">
+      <div class="split wide-r">
+        <div class="prose">
+          <h2>Results</h2>
+          <p>Predictions are median-scaled to the ground truth. Errors on C3VD and C3VDv2 are in millimeters; EndoMapper is evaluated against sparse COLMAP reconstructions of real colonoscopies (14,213 frames from 119 sequences) in COLMAP units.</p>
+          <p><strong>SEAMLESS is best on every metric on C3VD</strong>, cutting AbsRel by 16% and MAE from 4.4 mm to 3.7 mm. On C3VDv2, which adds fecal debris, mucous pools, blood, and fast camera motion, the margin widens: from C3VD to C3VDv2, SHADeS's AbsRel grows about twice as much as SEAMLESS's.</p>
+          <p>On EndoMapper, SEAMLESS leads on every metric but by small margins, which the sparse, texture-biased COLMAP reference cannot resolve. The qualitative difference is much larger: SHADeS mispredicts geometry and produces false dark patches in a subset of frames, while SEAMLESS stays stable and plausible.</p>
+        </div>
+        <div class="chart" data-chart>
+          <div class="chart-controls">
+            <div class="lseg" role="group" aria-label="Dataset">
+              <button type="button" data-ds="c3vd" aria-pressed="true">C3VD</button>
+              <button type="button" data-ds="c3vdv2" aria-pressed="false">C3VDv2</button>
+              <button type="button" data-ds="endo" aria-pressed="false">EndoMapper</button>
+            </div>
+            <div class="lseg" role="group" aria-label="Metric">
+              <button type="button" data-m="absrel" aria-pressed="true">AbsRel</button>
+              <button type="button" data-m="rmse" aria-pressed="false">RMSE</button>
+              <button type="button" data-m="mae" aria-pressed="false">MAE</button>
+              <button type="button" data-m="d1" aria-pressed="false">δ1</button>
+            </div>
+          </div>
+          <div class="bars" aria-live="polite"></div>
+          <p class="chart-note"></p>
+          <script type="application/json">{
+            "metrics": [
+              {"id":"absrel","label":"AbsRel","hint":"lower is better","higher":false,"dp":4},
+              {"id":"rmse","label":"RMSE","hint":"lower is better","higher":false,"dp":1},
+              {"id":"mae","label":"MAE","hint":"lower is better","higher":false,"dp":1},
+              {"id":"d1","label":"δ < 1.25","hint":"higher is better","higher":true,"dp":4}
+            ],
+            "sets": {
+              "c3vd": {"label":"C3VD","rows":[
+                {"name":"Monodepth2","absrel":0.1384,"rmse":6.3,"mae":4.6,"d1":0.8114},
+                {"name":"MonoViT","absrel":0.1391,"rmse":7.4,"mae":5.0,"d1":0.8230},
+                {"name":"IID","absrel":0.1476,"rmse":6.8,"mae":4.6,"d1":0.8053},
+                {"name":"SHADeS","ref":true,"absrel":0.1312,"rmse":6.3,"mae":4.4,"d1":0.8397},
+                {"name":"SEAMLESS","me":true,"absrel":0.1104,"rmse":5.2,"mae":3.7,"d1":0.8753}]},
+              "c3vdv2": {"label":"C3VDv2","rows":[
+                {"name":"SHADeS","ref":true,"absrel":0.1423,"rmse":7.1,"mae":5.2,"d1":0.7897},
+                {"name":"SEAMLESS","me":true,"absrel":0.1156,"rmse":5.7,"mae":4.3,"d1":0.8439}]},
+              "endo": {"label":"EndoMapper","rows":[
+                {"name":"SHADeS","ref":true,"absrel":0.3803,"rmse":12.0,"mae":7.9,"d1":0.6044},
+                {"name":"SEAMLESS","me":true,"absrel":0.3763,"rmse":11.7,"mae":7.7,"d1":0.6058}]}
+            }
+          }</script>
+        </div>
+      </div>
+
+      <div class="tablewrap" tabindex="0" role="region" aria-label="Table 1">
+        <table class="dtable">
+          <thead><tr><th>Method</th><th>MAE↓</th><th>RMSE↓</th><th>AbsRel↓</th><th>SqRel↓</th><th>δ1↑</th><th>δ2↑</th><th>δ3↑</th></tr></thead>
+          <tbody>
+            <tr><td>Monodepth2</td><td>4.6</td><td>6.3</td><td>0.1384</td><td>1.0198</td><td>0.8114</td><td>0.9839</td><td>0.9987</td></tr>
+            <tr><td>MonoViT</td><td>5.0</td><td>7.4</td><td>0.1391</td><td>1.2823</td><td>0.8230</td><td>0.9839</td><td>0.9991</td></tr>
+            <tr><td>IID</td><td>4.6</td><td>6.8</td><td>0.1476</td><td>1.2793</td><td>0.8053</td><td>0.9613</td><td>0.9926</td></tr>
+            <tr><td>SHADeS</td><td>4.4</td><td>6.3</td><td>0.1312</td><td>0.9599</td><td>0.8397</td><td>0.9858</td><td>0.9985</td></tr>
+            <tr class="best"><td>SEAMLESS</td><td>3.7</td><td>5.2</td><td>0.1104</td><td>0.6615</td><td>0.8753</td><td>0.9900</td><td>0.9993</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tcap">TABLE 1 · Depth estimation on C3VD (mm). Baselines as reported in SHADeS.</p>
+
+      <div class="tablewrap" tabindex="0" role="region" aria-label="Table 2">
+        <table class="dtable">
+          <thead><tr><th>Dataset</th><th>Method</th><th>MAE↓</th><th>RMSE↓</th><th>AbsRel↓</th><th>SqRel↓</th><th>δ1↑</th><th>δ2↑</th><th>δ3↑</th></tr></thead>
+          <tbody>
+            <tr><td>C3VDv2</td><td>SHADeS</td><td>5.2</td><td>7.1</td><td>0.1423</td><td>1.2120</td><td>0.7897</td><td>0.9753</td><td>0.9985</td></tr>
+            <tr class="best"><td>C3VDv2</td><td>SEAMLESS</td><td>4.3</td><td>5.7</td><td>0.1156</td><td>0.7695</td><td>0.8439</td><td>0.9887</td><td>0.9996</td></tr>
+            <tr><td>EndoMapper</td><td>SHADeS</td><td>7.9</td><td>12.0</td><td>0.3803</td><td>15.2570</td><td>0.6044</td><td>0.8268</td><td>0.9099</td></tr>
+            <tr class="best"><td>EndoMapper</td><td>SEAMLESS</td><td>7.7</td><td>11.7</td><td>0.3763</td><td>14.7141</td><td>0.6058</td><td>0.8279</td><td>0.9123</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tcap">TABLE 2 · C3VDv2 (mm) and real EndoMapper colonoscopies (COLMAP units). Neither has published baseline results, so the original SHADeS checkpoint is evaluated under the same protocol.</p>
+
+      <figure class="figure">
+        <img width="1305" height="780" src="seamless_c3vd.jpg" alt="Qualitative depth comparison on C3VD between SHADeS and SEAMLESS" loading="lazy" />
+        <figcaption class="figcap">FIG. 2 · Qualitative depth on C3VD: input, SHADeS, and SEAMLESS (darker is farther). SEAMLESS renders the overall colon geometry with greater fidelity.</figcaption>
+      </figure>
+      <figure class="figure">
+        <img width="1505" height="530" src="seamless_real.jpg" alt="Qualitative depth comparison on C3VDv2 and EndoMapper between SHADeS and SEAMLESS" loading="lazy" />
+        <figcaption class="figcap">FIG. 3 · Qualitative depth on (a) C3VDv2 and (b) EndoMapper: input, SHADeS, and SEAMLESS (darker is farther).</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="doc-sec alt">
+    <div class="wrap split">
+      <div class="prose">
+        <h2>Key contributions</h2>
+        <ul>
+          <li>A self-supervised light decoupling model, trained end to end on real endoscopy video, that decomposes images into albedo, luminance, and a learnable soft specular mask.</li>
+          <li>Integration of that decomposition into a self-supervised depth and pose pipeline that suppresses highlights before depth encoding and gates them out of the photometric loss.</li>
+          <li>The first benchmark of prior state of the art on C3VDv2, with SEAMLESS outperforming baselines across C3VD, C3VDv2, and EndoMapper.</li>
+        </ul>
+      </div>
+      <div class="prose">
+        <h2>Limitations</h2>
+        <ul>
+          <li>Real-data evaluation relies on sparse COLMAP pseudo ground truth of unknown accuracy, so EndoMapper conclusions rest mainly on qualitative evidence.</li>
+          <li>Several design changes beyond the mask (ℓ1-only decomposition loss, no albedo consistency term, initialization, pose output scale) are not yet ablated in isolation.</li>
+          <li>The mask over-detects along fold boundaries where depth changes sharply, leaving those pixels to the smoothness prior.</li>
+          <li>SHADeS still leads in relative pose on EndoMapper, though SEAMLESS leads on every pose metric on C3VD and C3VDv2.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="wrap kw">
+      <span class="lab">Keywords</span>
+      <ul class="tags"><li class="tag">Monocular Depth Estimation</li><li class="tag">Self-Supervised Specular Detection</li><li class="tag">Colonoscopy</li><li class="tag">Self-Supervised Learning</li><li class="tag">Intrinsic Image Decomposition</li><li class="tag">Endoscopy</li><li class="tag">PyTorch</li><li class="tag">ResNet-18</li><li class="tag">U-Net</li></ul>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap doc-foot">
+  <a class="back" style="margin:0" href="index.html#projects"><span class="ar" aria-hidden="true">←</span> Back to work</a>
+  <span>IPCAI submission · Endoscopy · 2026</span>
+</footer>
+
+<script src="js/main.js" defer></script>
+</body>
+</html>

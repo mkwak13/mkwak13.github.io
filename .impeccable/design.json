@@ -1,0 +1,144 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-11-05T02:10:00Z",
+ "title": "Design System: Minseok Kwak · Medical Imaging & 3D Vision",
+ "extensions": {
+  "colorMeta": {
+   "accent": {
+    "role": "primary",
+    "displayName": "Clinical Teal",
+    "canonical": "#0a7480"
+   },
+   "accent-glow": {
+    "role": "primary",
+    "displayName": "Scanner Glow",
+    "canonical": "#4fd1dc"
+   },
+   "near": {
+    "role": "secondary",
+    "displayName": "Near Coral",
+    "canonical": "#d9532b"
+   },
+   "amber": {
+    "role": "secondary",
+    "displayName": "Review Amber",
+    "canonical": "#8a5200"
+   },
+   "bg": {
+    "role": "neutral",
+    "displayName": "Paper",
+    "canonical": "#f4f6f7"
+   },
+   "viewer": {
+    "role": "neutral",
+    "displayName": "Viewer",
+    "canonical": "#0b1317"
+   },
+   "ink": {
+    "role": "neutral",
+    "displayName": "Ink",
+    "canonical": "#12212a"
+   }
+  },
+  "shadows": [
+   {
+    "name": "card",
+    "value": "0 1px 2px rgba(18,33,42,.06), 0 4px 16px rgba(18,33,42,.05)",
+    "purpose": "Cards at rest."
+   },
+   {
+    "name": "lift",
+    "value": "0 2px 4px rgba(18,33,42,.06), 0 14px 36px rgba(18,33,42,.10)",
+    "purpose": "Hovered cards and viewers."
+   }
+  ],
+  "motion": [
+   {
+    "name": "ease-out",
+    "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+    "purpose": "All UI transitions."
+   },
+   {
+    "name": "press",
+    "value": "scale(0.97) 160ms",
+    "purpose": "Buttons on :active."
+   },
+   {
+    "name": "scan-reveal",
+    "value": "1.3s once on load",
+    "purpose": "Hero viewer reveal; off under reduced motion."
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "narrow",
+    "value": "520px"
+   },
+   {
+    "name": "menu",
+    "value": "860px"
+   },
+   {
+    "name": "split",
+    "value": "1024px"
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Primary Button",
+   "kind": "button",
+   "refersTo": "button-primary",
+   "description": "Main action.",
+   "html": "<a class=\"ds-btn\" href=\"#\">See selected work ↓</a>",
+   "css": ".ds-btn{display:inline-flex;align-items:center;height:46px;padding:0 20px;border-radius:6px;background:#0a7480;color:#fff;font:500 15px/1 'IBM Plex Sans',sans-serif;text-decoration:none;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 200ms}.ds-btn:hover{background:#075861}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #0a7480;outline-offset:3px}"
+  },
+  {
+   "name": "Metric Chip",
+   "kind": "custom",
+   "description": "Highlighted result.",
+   "html": "<div class=\"ds-metric\"><b>−16%</b><span>AbsRel vs SHADeS on C3VD</span></div>",
+   "css": ".ds-metric{display:inline-flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px;background:rgba(10,116,128,.09)}.ds-metric b{font:600 22px/1.1 'IBM Plex Mono',monospace;color:#075861}.ds-metric span{font:13px 'IBM Plex Sans',sans-serif;color:#33444e}"
+  },
+  {
+   "name": "Viewer",
+   "kind": "custom",
+   "description": "Dark frame for medical images.",
+   "html": "<div class=\"ds-viewer\"><div class=\"ds-bar\">SEAMLESS · frame</div><div class=\"ds-stage\"></div><div class=\"ds-bar\">depth 0.62 · mid</div></div>",
+   "css": ".ds-viewer{background:#0b1317;border-radius:16px;padding:10px;width:260px}.ds-bar{font:500 12.5px 'IBM Plex Mono',monospace;color:#93a9b1;padding:6px}.ds-stage{aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#fcfdbf,#fc8961,#b73779,#000004)}"
+  }
+ ],
+ "narrative": {
+  "northStar": "The Reading Room",
+  "overview": "Bright, quiet paper for the words and dark, glare-free viewer panels for the images. Medical images are interactive where it helps: compare sliders, layer explorers, a depth probe.",
+  "rules": [
+   {
+    "name": "The Reading Room Rule",
+    "body": "Dark backgrounds exist only to hold medical images. Text sections are always light.",
+    "section": "colors"
+   },
+   {
+    "name": "The One Accent Rule",
+    "body": "Teal is the only interface accent; coral and amber carry meaning (depth, authorship, review status) and nothing else.",
+    "section": "colors"
+   },
+   {
+    "name": "The Readout Rule",
+    "body": "Monospace is for numbers, status, captions and viewer text, never for paragraphs.",
+    "section": "typography"
+   }
+  ],
+  "dos": [
+   "Do show imaging work inside viewer frames, interactive where it explains something.",
+   "Do highlight key results as metric chips with exact numbers.",
+   "Do keep paper status exact: SEAMLESS is an IPCAI submission; SpatialMosaic is an arXiv preprint.",
+   "Do keep figure and table captions in mono below figures."
+  ],
+  "donts": [
+   "Don't use em dashes in site copy.",
+   "Don't put text sections on dark grounds.",
+   "Don't add colored side stripes to cards or callouts.",
+   "Don't invent data in interactive pieces; probes and charts read only real outputs and published numbers."
+  ]
+ }
+}
